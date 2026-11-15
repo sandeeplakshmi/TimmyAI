@@ -1,6 +1,6 @@
 # Timmy (TimmyAI)
 
-**A $42 desk buddy with neon eyes that you can talk to.** Hold the button, ask
+**A desk buddy with neon eyes that you can talk to.** Hold the button, ask
 anything, and Timmy answers out loud while its eyes listen, think and react.
 The brain runs on your own Mac, so it's private by default.
 
