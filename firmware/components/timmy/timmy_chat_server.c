@@ -92,7 +92,7 @@ static char s_fallback[URL_MAX + 1];
 static volatile bool s_away;            /* this connection uses the fallback URL */
 static int64_t s_unready_since;         /* trying to connect since (0: connected or idle) */
 #define SWITCH_AFTER_US (12LL * 1000000)
-#define ALIVE_US (1500LL * 1000)    /* a ping after waking must come back this fast */
+#define ALIVE_US (5LL * 1000000)    /* a ping after waking must come back within this (radio and CPU may still be waking) */
 static char s_dev[DEV_MAX + 1] = "timmy-desk";
 static uint8_t s_key[KEY_BYTES];
 static bool s_have_key;
@@ -737,15 +737,20 @@ static void timmy_task(void *arg)
         static int64_t next_try;
         /* Just woke: a socket that doesn't answer a ping within ALIVE_US is
          * dead; reconnect right away (home first) instead of on the next press. */
-        static int64_t alive_sent;
+        static int64_t alive_sent, alive_checked;
         if (s_check_alive) {
             s_check_alive = false;
-            if (s_ws && s_ready && send_json("{\"type\":\"ping\"}")) {
-                alive_sent = esp_timer_get_time();
-            } else if (want && !s_ready) {
-                if (s_ws) ws_stop();
-                s_away = false;
-                next_try = 0;
+            /* Once per wake: the voice loop can leave and re-enter its rest
+             * many times while a saved note waits. A connection still being
+             * made is left alone; only an idle, established one is checked. */
+            int64_t now = esp_timer_get_time();
+            if (now - alive_checked > 20LL * 1000000 && !alive_sent) {
+                alive_checked = now;
+                if (s_ws && s_ready && send_json("{\"type\":\"ping\"}")) {
+                    alive_sent = now;
+                } else if (want && !s_ws) {
+                    next_try = 0;   /* not connected: try now, not after the backoff */
+                }
             }
         }
         if (alive_sent && s_pong_at >= alive_sent) {
