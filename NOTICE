@@ -1,0 +1,30 @@
+Timmy
+Copyright 2026 the Timmy contributors
+
+Based on the Muse Gadgets SDK by Meta Platforms, Inc. and affiliates
+(Apache License 2.0), modified.
+
+This product includes software developed by Meta Platforms, Inc. and
+affiliates: the ESP32 firmware in firmware/ (Home Link core, UI, audio and
+board support for the Waveshare ESP32-S3-Touch-AMOLED-1.75C) and the Noise
+protocol library in firmware/components/noise_core. Files from that source
+keep their original copyright and license headers; the ones changed for
+Timmy say "Modified by the Timmy contributors, 2026".
+
+Bundled third-party components
+------------------------------
+- minimp3 (firmware/components/minimp3): CC0-1.0, public domain dedication.
+  See firmware/components/minimp3/LICENSE.
+- three.js (web/vendor/three): MIT License, Copyright 2010-2025 three.js
+  authors. See web/vendor/three/LICENSE.
+- TalkingHead (web/vendor/talkinghead): MIT License, Copyright 2023-2024
+  Mika Suominen. See web/vendor/talkinghead/LICENSE.
+
+Fetched at build or install time (not bundled)
+----------------------------------------------
+- ESP-IDF v6.0.3 (Apache-2.0) and the ESP Component Registry components the
+  firmware lists in its idf_component.yml files (LVGL: MIT; Espressif
+  components: Apache-2.0; the Waveshare board support package: see its own
+  license), downloaded into firmware/managed_components/.
+- Hermes Agent and its speech models (Whisper, Piper, Kokoro voices), each
+  under its own license, installed by install.sh.

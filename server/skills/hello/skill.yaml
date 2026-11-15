@@ -1,0 +1,7 @@
+name: hello
+description: A sample skill. Copy this folder to start your own.
+examples:
+  - "run the hello skill"
+  - "hello skill with stars"
+patterns:
+  - '\bhello skill\b(?: with (?P<extra>\w+))?'

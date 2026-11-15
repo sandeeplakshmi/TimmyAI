@@ -1,0 +1,110 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- Copyright 2026 the Timmy contributors -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Timmy setup</title>
+<style>
+  :root { color-scheme: dark; --bg: #04070d; --fg: #d8f6ff; --dim: #7fa3b3; --accent: #3fffb0; --line: #1b2a36; --bad: #ff6b6b; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 ui-monospace, "SF Mono", Menlo, monospace; }
+  main { max-width: 620px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 22px; letter-spacing: .08em; color: var(--accent); margin: 0 0 4px; }
+  p.lead { color: var(--dim); margin: 0 0 24px; }
+  fieldset { border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin: 0 0 16px; }
+  legend { padding: 0 6px; color: var(--accent); }
+  label { display: block; margin: 8px 0 4px; }
+  input[type=text], input[type=password], select { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 8px;
+    border: 1px solid var(--line); background: #0a121b; color: var(--fg); font: inherit; }
+  .row { display: flex; gap: 16px; flex-wrap: wrap; }
+  .hint { color: var(--dim); font-size: 13px; }
+  button { padding: 10px 18px; border-radius: 8px; border: 1px solid var(--accent); background: transparent; color: var(--accent);
+    font: inherit; cursor: pointer; }
+  button:hover { background: #0d2a20; }
+  #msg { margin-top: 16px; white-space: pre-wrap; }
+  .ok { color: var(--accent); } .err { color: var(--bad); }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <h1>TIMMY SETUP</h1>
+  <p class="lead">Pick Timmy's brain and voice. Everything stays on this Mac: keys go to Hermes' own settings file,
+    other choices to <code id="home">~/.timmy</code>. Nothing here is sent anywhere else.</p>
+
+  <fieldset>
+    <legend>Brain</legend>
+    <div class="row">
+      <label><input type="radio" name="brain" value="claude" checked> Claude (API key)</label>
+      <label><input type="radio" name="brain" value="local"> Local model (Ollama)</label>
+    </div>
+    <div id="claude">
+      <label for="key">Claude API key</label>
+      <input id="key" type="password" autocomplete="off" placeholder="sk-ant-..." spellcheck="false">
+      <div class="hint" id="keystate">Paste your key here yourself. It is stored with mode 600 and never shown again.</div>
+    </div>
+    <div id="local" hidden>
+      <label for="model">Model name</label>
+      <input id="model" type="text" placeholder="qwen2.5:7b" spellcheck="false">
+      <div class="hint">Install Ollama and pull the model first (ollama pull qwen2.5:7b).</div>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>You</legend>
+    <label for="name">How Timmy addresses you (optional)</label>
+    <input id="name" type="text" placeholder="Sam">
+  </fieldset>
+
+  <fieldset>
+    <legend>Voice</legend>
+    <label for="voice">Voice</label>
+    <select id="voice"><option value="">(loading voices…)</option></select>
+    <div class="hint">Changing it downloads the voice once if needed. <button type="button" id="sample">Play a sample</button></div>
+  </fieldset>
+
+  <button type="button" id="save">Save</button>
+  <div id="msg"></div>
+  <p class="hint">Done? <a href="./">Open Timmy</a></p>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const msg = (t, cls) => { $("msg").textContent = t; $("msg").className = cls || ""; };
+document.querySelectorAll("input[name=brain]").forEach(r => r.onchange = () => {
+  const local = document.querySelector("input[name=brain]:checked").value === "local";
+  $("local").hidden = !local; $("claude").hidden = local;
+});
+async function load() {
+  try {
+    const s = await (await fetch("/setup/status")).json();
+    $("home").textContent = s.timmy_home;
+    if (s.claude_key_set) $("keystate").textContent = "A key is already set. Leave this empty to keep it.";
+    if (s.local_model) { document.querySelector("input[value=local]").checked = true; $("model").value = s.local_model;
+      $("local").hidden = false; $("claude").hidden = true; }
+    if (s.assistant_name) $("name").value = s.assistant_name;
+  } catch { msg("Timmy's server isn't answering. Start it with ./start-timmy.sh", "err"); }
+  try {
+    const v = await (await fetch("/voice/voices")).json();
+    $("voice").innerHTML = '<option value="">(keep the current voice)</option>' +
+      v.voices.map(x => `<option value="${x.name}">${x.name} (${x.about || ""})</option>`).join("");
+  } catch { $("voice").innerHTML = '<option value="">(voices unavailable)</option>'; }
+}
+$("sample").onclick = () => { const v = $("voice").value; if (v) new Audio("/voice/sample?voice=" + encodeURIComponent(v)).play(); };
+$("save").onclick = async () => {
+  const brain = document.querySelector("input[name=brain]:checked").value;
+  const body = { brain, claude_key: $("key").value, local_model: $("model").value, user_name: $("name").value };
+  try {
+    const r = await (await fetch("/setup/save", { method: "POST", headers: { "Content-Type": "application/json" },
+                                                  body: JSON.stringify(body) })).json();
+    $("key").value = "";
+    if (!r.ok) return msg(r.error || "Couldn't save.", "err");
+    if ($("voice").value) await fetch("/voice/set", { method: "POST", headers: { "Content-Type": "application/json" },
+                                                     body: JSON.stringify({ voice: $("voice").value }) });
+    msg("Saved.\nNext:\n- " + r.next.join("\n- "), "ok");
+  } catch { msg("Couldn't reach Timmy's server.", "err"); }
+};
+load();
+</script>
+</body>
+</html>

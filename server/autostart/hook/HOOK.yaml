@@ -1,0 +1,4 @@
+name: timmy-web
+description: Serve Timmy's web page (http://localhost:8000) from inside the Hermes gateway
+events:
+  - gateway:startup

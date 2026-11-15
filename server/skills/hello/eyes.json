@@ -1,0 +1,4 @@
+{
+  "wave": {"look": "cheer", "particles": "hearts"},
+  "sparkle": {"look": "happy", "particles": "stars", "hue": 50}
+}

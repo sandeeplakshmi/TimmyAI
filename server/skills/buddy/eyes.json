@@ -1,0 +1,7 @@
+{
+  "asleep":   {"look": "asleep", "particles": "z"},
+  "awake":    {"look": "surprised"},
+  "water":    {"look": "glow", "particles": "drops", "hue": 200, "secs": 6},
+  "posture":  {"look": "glow", "particles": "stars", "hue": 150, "secs": 6},
+  "settings": {"look": "settings"}
+}

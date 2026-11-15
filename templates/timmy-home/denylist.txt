@@ -1,0 +1,3 @@
+# Strings that must never appear in the public Timmy repo: your Wi-Fi name, LAN addresses,
+# host names, device IDs, real names, e-mail addresses. One per line; case doesn't matter.
+# scripts/check-private.sh (and the pre-commit hook) block a commit that contains any of them.

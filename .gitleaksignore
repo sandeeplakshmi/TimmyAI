@@ -1,0 +1,2 @@
+# RFC 6455 sample WebSocket key ("the sample nonce"), not a secret
+firmware/main/noise_upgrade.h:generic-api-key:108

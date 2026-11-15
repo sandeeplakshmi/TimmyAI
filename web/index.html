@@ -1,0 +1,1370 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- Copyright 2026 the Timmy contributors -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Timmy</title>
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icons/favicon.png">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-title" content="Timmy">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#04070d">
+<script type="importmap">
+{ "imports": { "three": "./vendor/three/three.module.js", "three/addons/": "./vendor/three/addons/" } }
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #04070d;
+    --panel: rgba(10, 22, 36, 0.55);
+    --line: rgba(80, 200, 255, 0.18);
+    --text: #cfeaff;
+    --dim: #5f8299;
+    --accent: #3fd2ff;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; min-height: 100dvh; }
+  html { background: var(--bg); }   /* no white strip below the page in home-screen mode */
+  body {
+    background: radial-gradient(ellipse at center, #0a1626 0%, var(--bg) 70%);
+    color: var(--text);
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    overflow: hidden;
+  }
+  canvas#orb { position: fixed; inset: 0; width: 100%; height: 100%; cursor: pointer; }
+  #avatar { position: fixed; inset: 0; display: none; cursor: pointer; z-index: 0; }
+  #bubbles, form#ask, #log, .hud, #status, #wake { z-index: 5; }
+  body.avatar-mode #avatar { display: block; }
+  body.avatar-mode canvas#orb { visibility: hidden; }
+  body.avatar-mode #status { top: 64px; padding: 6px 14px; border-radius: 10px; background: rgba(4,7,13,.55); }
+  #avatarload { position: fixed; left: 50%; top: 45%; transform: translateX(-50%); color: var(--dim);
+    font-size: 12px; letter-spacing: .1em; display: none; pointer-events: none; }
+  .grid {
+    position: fixed; inset: 0; pointer-events: none;
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 60px 60px;
+    mask-image: radial-gradient(ellipse at center, transparent 30%, #000 85%);
+    opacity: .35;
+  }
+  .hud { position: fixed; padding: 14px 16px; background: var(--panel);
+    border: 1px solid var(--line); border-radius: 10px; backdrop-filter: blur(6px); }
+  .hud h3 { margin: 0 0 8px; font: 500 11px "Orbitron", sans-serif; letter-spacing: .25em; color: var(--dim); }
+  /* small, quiet clock in the corner (it used to be a big panel) */
+  #clock { position: fixed; top: calc(18px + env(safe-area-inset-top)); left: 20px; z-index: 5; color: var(--dim);
+    font-size: 12px; letter-spacing: .06em; pointer-events: none; }
+  #clock .time { font: 600 13px "Orbitron", sans-serif; color: var(--text); margin-right: 8px; }
+  #sys { top: 20px; right: 20px; min-width: 200px; font-size: 12px; }
+  #sys .row { display: flex; justify-content: space-between; gap: 16px; padding: 3px 0; }
+  #sys .row span:last-child { color: var(--accent); }
+  #status {
+    position: fixed; left: 50%; top: calc(50% + min(26vh, 220px)); transform: translateX(-50%);
+    font: 500 13px "Orbitron", sans-serif; letter-spacing: .4em; color: var(--accent);
+    text-transform: uppercase; text-align: center; pointer-events: none; white-space: nowrap;
+  }
+  #status small { display: block; margin-top: 8px; letter-spacing: .15em; color: var(--dim);
+    font: 400 11px "JetBrains Mono", monospace; text-transform: none;
+    white-space: normal; max-width: min(460px, calc(100vw - 40px)); margin-left: auto; margin-right: auto; line-height: 1.5; }
+  /* desktop: chat fills the whole left column, from just under the clock down to the text box */
+  #log {
+    position: fixed; left: 20px; top: calc(48px + env(safe-area-inset-top)); bottom: calc(84px + var(--ask-extra, 0px)); width: min(440px, 34vw);
+    overflow-y: auto; font-size: 13px; line-height: 1.5;
+    mask-image: linear-gradient(transparent, #000 40px);
+    padding-top: 16px;
+  }
+  /* chat-app bubbles: you on the left, Timmy on the right */
+  .msg { width: fit-content; max-width: 82%; margin: 8px 0; padding: 7px 12px 8px; border-radius: 16px;
+    overflow-wrap: anywhere; border: 1px solid var(--line); }
+  .msg b { display: block; font: 600 10px "Orbitron", sans-serif; letter-spacing: .12em; margin-bottom: 2px; }
+  .msg.you { margin-right: auto; border-bottom-left-radius: 4px; background: rgba(159, 182, 199, .10); }
+  .msg.kr { margin-left: auto; border-bottom-right-radius: 4px; background: rgba(63, 210, 255, .10); border-color: rgba(63, 210, 255, .35); }
+  .msg.you b { color: #9fb6c7; }
+  .msg.kr b { color: var(--accent); text-align: right; }
+  form#ask {
+    position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%);
+    width: min(640px, calc(100% - 32px)); display: flex; gap: 8px; align-items: flex-end;
+  }
+  /* multi-line text box: grows with the text up to ~6 lines, then scrolls */
+  #ask textarea {
+    flex: 1; background: var(--panel); border: 1px solid var(--line); color: var(--text);
+    border-radius: 23px; padding: 12px 18px; font: inherit; line-height: 20px; outline: none;
+    resize: none; height: 46px; max-height: 146px; overflow-y: auto; display: block;
+  }
+  #ask textarea:focus { border-color: var(--accent); }
+  #ask button {
+    background: transparent; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: 0 18px; font: 500 12px "Orbitron", sans-serif;
+    letter-spacing: .15em; cursor: pointer;
+  }
+  #ask button:hover { background: rgba(63, 210, 255, .12); }
+  /* send: round paper-plane button like chat apps */
+  #ask button#sendbtn { flex: 0 0 46px; width: 46px; height: 46px; padding: 0; display: grid; place-items: center; }
+  #ask button#sendbtn svg { margin-left: 3px; }
+  /* ☰ menu: Alerts, Voice, Hands-free, Avatar, New conversation */
+  form#ask { position: fixed; }
+  #menubtn { position: relative; flex: 0 0 46px; height: 46px; padding: 0 !important; font-size: 18px !important; letter-spacing: 0 !important; }
+  #menubadge { position: absolute; top: -4px; right: -4px; display: none; min-width: 16px; padding: 0 4px; border-radius: 999px;
+    background: #3fffb0; color: #04070d; font: 700 10px/16px "JetBrains Mono", monospace; }
+  #menubadge.on { display: block; }
+  #menu { position: absolute; left: 0; bottom: calc(100% + 8px); display: none; flex-direction: column; min-width: 230px;
+    padding: 6px; border-radius: 14px; background: #0a1624; border: 1px solid rgba(120,210,255,.3); box-shadow: 0 10px 40px rgba(0,0,0,.6); z-index: 60; }
+  #menu.open { display: flex; }
+  #menu button.hf { text-align: left; border: 0 !important; border-radius: 10px; padding: 10px 12px !important; color: var(--text);
+    font: 500 12px "Orbitron", sans-serif; letter-spacing: .06em; background: transparent; display: flex; justify-content: space-between; align-items: center; }
+  #menu button.hf:hover { background: rgba(63,210,255,.1); }
+  #menu button.hf.on { color: #3fffb0; }
+  #menu button.hf.on::after { content: "ON"; font-size: 10px; border: 1px solid rgba(63,255,176,.5); border-radius: 999px; padding: 0 6px; }
+  #wake {
+    position: fixed; left: 50%; top: calc(20px + env(safe-area-inset-top)); transform: translateX(-50%); display: none;
+    padding: 6px 14px; border-radius: 999px; border: 1px solid rgba(63,255,176,.5);
+    background: rgba(10,36,28,.6); color: #3fffb0; font-size: 12px; letter-spacing: .08em; white-space: nowrap;
+  }
+  #wake.on { display: block; }
+  body.armed #status { color: #3fffb0; }
+  body.armed.avatar-mode #avatar { filter: drop-shadow(0 0 18px rgba(63,255,176,.35)); }
+  #wake i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #3fffb0;
+    margin-right: 8px; animation: pulse 1.6s infinite; vertical-align: 1px; }
+  #wake.paused { border-color: var(--line); color: var(--dim); }
+  #wake.paused i { background: var(--dim); animation: none; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .25; } }
+  /* Briefings panel */
+  #alertspanel { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); width: min(620px, calc(100% - 32px));
+    max-height: 72vh; overflow-y: auto; display: none; z-index: 50; padding: 14px 16px; border-radius: 16px;
+    background: #0a1624; border: 1px solid rgba(120,210,255,.3);
+    box-shadow: 0 10px 40px rgba(0,0,0,.6); font-size: 12px; }
+  #alertspanel.open { display: block; }
+  .ap-sec { margin: 12px 0 6px; font: 600 10px "Orbitron", sans-serif; letter-spacing: .14em; color: var(--dim); }
+  .ap-w { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+  .ap-w b { font-weight: 600; } .ap-w small { color: var(--dim); }
+  .ap-w .res { color: var(--dim); } .ap-w .res.new { color: #3fffb0; }
+  .ap-i { padding: 8px 10px; margin: 6px 0; border-radius: 10px; border: 1px solid var(--line); background: rgba(255,255,255,.02); }
+  .ap-i.unread { border-color: rgba(63,255,176,.5); }
+  .ap-i.briefing { border-left: 3px solid rgba(63,210,255,.6); }
+  .ap-i .t { display: flex; justify-content: space-between; gap: 8px; color: var(--dim); font-size: 11px; }
+  .ap-i .h { margin-top: 3px; font-weight: 600; } .ap-i .b { margin-top: 4px; white-space: pre-wrap; display: none; color: var(--text); }
+  .ap-i.open .b { display: block; } .ap-i { cursor: pointer; }
+  .ap-l { display: flex; justify-content: space-between; gap: 10px; padding: 4px 0; }
+  .ap-l a, .ap-i a { color: #9fe6ff; } .ap-l span { color: #3fffb0; white-space: nowrap; }
+  .ap-empty { color: var(--dim); padding: 4px 0; }
+  #alertsbadge { display: none; margin-left: 6px; min-width: 16px; padding: 0 5px; border-radius: 999px; background: #3fffb0;
+    color: #04070d; font: 700 10px/16px "JetBrains Mono", monospace; }
+  #alertsbadge.on { display: inline-block; }
+
+  /* Voice & avatar picker */
+  #voicepanel { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); width: min(520px, calc(100% - 32px));
+    max-height: 70vh; overflow-y: auto; display: none; z-index: 50; padding: 14px 16px; border-radius: 16px;
+    background: #0a1624; border: 1px solid rgba(120,210,255,.3);
+    box-shadow: 0 10px 40px rgba(0,0,0,.6); font-size: 12px; }
+  #voicepanel.open { display: block; }
+  @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+  .vp-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .vp-head b { font: 600 12px "Orbitron", sans-serif; letter-spacing: .1em; color: var(--accent); }
+  /* close buttons: big enough to see and to tap */
+  .vp-x { flex: 0 0 auto; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; cursor: pointer;
+    font-size: 22px; line-height: 1; color: var(--text); border: 1px solid rgba(63, 210, 255, .55); background: rgba(63, 210, 255, .10); }
+  .vp-x:hover { background: rgba(63, 210, 255, .25); }
+  .vp-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 6px 0;
+    border-bottom: 1px solid var(--line); }
+  .vp-seg button, .vp-tabs button, .vp-v button { background: transparent; border: 1px solid var(--line); color: var(--text);
+    border-radius: 999px; padding: 3px 10px; font: inherit; cursor: pointer; }
+  .vp-seg button.on, .vp-tabs button.on, .vp-v button.use.on { border-color: #3fffb0; color: #3fffb0; }
+  .vp-speed { display: flex; align-items: center; gap: 6px; color: var(--dim); }
+  .vp-speed input { width: 140px; accent-color: #3fd2ff; }
+  .vp-speed em { font-style: normal; color: var(--text); min-width: 52px; }
+  .vp-tabs { display: flex; gap: 6px; margin: 10px 0 6px; }
+  .vp-v { display: flex; align-items: center; gap: 8px; padding: 5px 0; }
+  .vp-v .nm { flex: 1; } .vp-v .nm small { color: var(--dim); }
+  .vp-hint { color: var(--dim); font-size: 11px; margin-top: 8px; }
+  .vp-v .nat { font-style: normal; font-size: 10px; color: #3fffb0; border: 1px solid rgba(63,255,176,.4); border-radius: 999px; padding: 0 6px; }
+
+  /* Info bubbles: projects and skills Timmy is talking about */
+  #bubbles { position: fixed; left: calc(50% + min(20vw, 190px)); top: 50%; transform: translateY(-50%);
+    width: min(330px, 36vw); display: flex; flex-direction: column; gap: 10px; z-index: 5; pointer-events: none; }
+  body.avatar-mode #bubbles { left: calc(50% + min(17vw, 170px)); }
+  .bubble { pointer-events: auto; position: relative; padding: 11px 14px 12px; border-radius: 16px;
+    background: rgba(12, 26, 44, .72); border: 1px solid rgba(120, 210, 255, .28); backdrop-filter: blur(10px);
+    box-shadow: 0 8px 30px rgba(0,0,0,.35), inset 0 0 22px rgba(63,210,255,.06); font-size: 12px; line-height: 1.45;
+    animation: pop .38s cubic-bezier(.2,1.4,.4,1) both; transition: opacity .6s, transform .6s; cursor: pointer; }
+  .bubble::before { content: ""; position: absolute; left: -9px; top: 22px; width: 16px; height: 16px; transform: rotate(45deg);
+    background: rgba(12, 26, 44, .72); border-left: 1px solid rgba(120,210,255,.28); border-bottom: 1px solid rgba(120,210,255,.28); }
+  .bubble.out { opacity: 0; transform: translateX(14px) scale(.96); }
+  .bubble .bt { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+  .bubble .bt b { font: 600 12px "Orbitron", sans-serif; letter-spacing: .06em; color: var(--accent); }
+  .bubble .bt i { font-style: normal; font-size: 10px; color: #3fffb0; border: 1px solid rgba(63,255,176,.35);
+    border-radius: 999px; padding: 1px 7px; white-space: nowrap; }
+  .bubble .bx { position: absolute; right: 5px; top: 5px; width: 28px; height: 28px; display: grid; place-items: center;
+    border-radius: 50%; color: var(--text); font-size: 18px; line-height: 1; cursor: pointer; z-index: 2;
+    border: 1px solid rgba(63, 210, 255, .5); background: rgba(63, 210, 255, .10); }
+  .bubble .bx:hover { background: rgba(63, 210, 255, .25); }
+  .bubble .bt { padding-right: 30px; }   /* title stays clear of the × */
+  .bubble .bt { padding-right: 22px; }
+  .bubble ul { margin: 6px 0 0; padding: 0 0 0 14px; color: var(--text); max-height: 52vh; overflow-y: auto; }
+  .bubble li { margin: 2px 0; }
+  .bubble li.more { display: none; }
+  .bubble.open li.more { display: list-item; }
+  .bubble a { color: #9fe6ff; }
+  /* topic/skill cards inside Timmy's chat message */
+  .icards { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+  .icard { border: 1px solid rgba(63, 210, 255, .3); border-left: 3px solid var(--accent); border-radius: 10px;
+    background: rgba(4, 14, 26, .55); padding: 7px 10px 8px; font-size: 12px; line-height: 1.45; }
+  .icard .ic-t { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .icard .ic-t b { font: 600 11px "Orbitron", sans-serif; letter-spacing: .06em; color: var(--accent); margin: 0; display: inline; }
+  .icard .ic-t i { font-style: normal; font-size: 10px; color: #3fffb0; border: 1px solid rgba(63,255,176,.35);
+    border-radius: 999px; padding: 1px 7px; white-space: nowrap; }
+  .icard ul { margin: 4px 0 0; padding: 0 0 0 14px; color: var(--text); }
+  .icard li.more { display: none; }
+  .icard.open li.more { display: list-item; }
+  .icard a { color: #9fe6ff; }
+  .icard .ic-more { color: var(--dim); font-size: 10px; margin-top: 3px; cursor: pointer; }
+  .bubble .hint { color: var(--dim); font-size: 10px; margin-top: 4px; }
+  @keyframes pop { from { opacity: 0; transform: translateX(-12px) scale(.85); } to { opacity: 1; transform: none; } }
+  .msg .chip { display: inline-block; margin: 2px 4px 0 0; padding: 0 7px; border-radius: 999px; font-size: 11px;
+    border: 1px solid var(--line); color: var(--dim); }
+  @media (max-width: 700px) {
+    #bubbles { left: 16px; right: 16px; width: auto; top: 46%; transform: none; gap: 8px; z-index: 7; }   /* below the face, above the chat so × can be tapped */
+    .bubble { font-size: 11px; padding: 9px 12px 10px; background: rgba(10, 22, 38, .97); }   /* solid: it sits over the chat */
+    .bubble::before { left: 50%; top: auto; bottom: -9px; transform: rotate(-45deg); }
+    #sys { display: none; }
+    #clock { display: none; }   /* the phone already shows the time */
+    /* chat fills the space from the text box up to just under the face */
+    #log { top: auto; width: calc(100% - 40px); bottom: calc(66px + var(--ask-extra, 0px) + env(safe-area-inset-bottom)); max-height: calc(100dvh - 368px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+      mask-image: linear-gradient(transparent, #000 12%); }
+    #status { top: calc(10px + env(safe-area-inset-top)); }
+    #status small { max-width: calc(100vw - 136px); letter-spacing: .08em; }   /* wrap and keep clear of the ☰ */
+    body.avatar-mode #status { top: calc(10px + env(safe-area-inset-top)); }
+    /* phone: text box + SEND pinned to the bottom; ☰ sits in the top-right corner and opens downward */
+    form#ask { gap: 6px; bottom: calc(6px + env(safe-area-inset-bottom)); left: 16px; right: 16px; width: auto; transform: none; }  /* no transform, so the fixed ☰ is placed against the screen */
+    #menubtn { position: fixed; top: calc(10px + env(safe-area-inset-top)); right: 16px; width: 44px; height: 44px; padding: 0; display: grid; place-items: center; z-index: 61;
+      background: var(--panel) !important; }
+    #menu { position: fixed; left: auto; right: 16px; top: calc(56px + env(safe-area-inset-top)); bottom: auto; }
+    #clock { top: calc(12px + env(safe-area-inset-top)); left: 16px; }
+    #ask textarea { flex: 1 1 auto; min-width: 0; padding: 12px 14px; font-size: 16px; line-height: 22px; height: 48px; max-height: 158px; }
+    #ask button#sendbtn { flex: 0 0 46px; }
+    #voicepanel, #alertspanel { bottom: calc(66px + env(safe-area-inset-bottom)); max-height: 70vh; }
+  }
+</style>
+</head>
+<body>
+<canvas id="orb"></canvas>
+<div id="avatar"></div>
+<div id="avatarload">Loading avatar…</div>
+<div class="grid"></div>
+
+<div id="clock"><span class="time" id="time">--:--</span><span class="date" id="date"></span></div>
+
+<div id="sys" class="hud">
+  <h3>SYSTEM</h3>
+  <div class="row"><span>Core</span><span id="core">ONLINE</span></div>
+  <div class="row"><span>Brain</span><span id="brain">OFFLINE</span></div>
+  <div class="row"><span>Voice</span><span id="voice">—</span></div>
+  <div class="row"><span>Wake</span><span id="wakestat">OFF</span></div>
+  <div class="row"><span>Battery</span><span id="batt">—</span></div>
+  <div class="row"><span>Uptime</span><span id="uptime">0s</span></div>
+</div>
+
+<div id="bubbles" aria-live="polite"></div>
+<div id="alertspanel" role="dialog" aria-label="Briefings">
+  <div class="vp-head"><b>Briefings</b><span class="vp-x" title="Close" role="button" aria-label="Close">×</span></div>
+  <div class="ap-sec">Recent briefings</div><div id="ap-items"></div>
+</div>
+<div id="voicepanel" role="dialog" aria-label="Voice and avatar">
+  <div class="vp-head"><b>Voice &amp; avatar</b><span class="vp-x" title="Close" role="button" aria-label="Close">×</span></div>
+  <div class="vp-row"><span>Avatar</span>
+    <span class="vp-seg"><button type="button" data-avatar="male">Male</button><button type="button" data-avatar="female">Female</button></span></div>
+  <div class="vp-row"><span>Voice engine</span>
+    <span class="vp-seg" id="vp-engine"><button type="button" data-engine="kokoro">Kokoro · natural, fast</button><button type="button" data-engine="orpheus">Orpheus · most human, slower</button><button type="button" data-engine="piper">Piper · classic</button></span></div>
+  <div class="vp-row"><span>Speed</span>
+    <span class="vp-speed"><small>slower</small><input type="range" id="vp-speed" min="0.9" max="1.6" step="0.05"><small>faster</small> <em id="vp-speedval"></em></span></div>
+  <div class="vp-row"><span>Wait for me</span>
+    <span class="vp-seg" id="vp-pause"><button type="button" data-ms="1000">1 s</button><button type="button" data-ms="1800">1.8 s</button><button type="button" data-ms="2500">2.5 s</button><button type="button" data-ms="3500">3.5 s</button></span></div>
+  <div class="vp-tabs"><button type="button" data-filter="male" class="on">Male voices</button><button type="button" data-filter="female">Female voices</button><button type="button" data-filter="all">All</button></div>
+  <div id="vp-list"></div>
+  <div class="vp-hint">▶ plays a sample. “Use” makes it Timmy's voice everywhere (page, phone, terminal, briefing). Orpheus sounds the most human but takes a few seconds per sentence on this Mac, and its first sample loads the model (~10 s).</div>
+</div>
+<div id="wake"><i></i><span>Hands-free: say “Hey Timmy”</span></div>
+<div id="status">Standby<small>&nbsp;</small></div>
+<div id="log"></div>
+
+<form id="ask" autocomplete="off">
+  <button type="button" id="menubtn" aria-label="Menu" aria-expanded="false">☰<span id="menubadge"></span></button>
+  <div id="menu" role="menu">
+    <button type="button" id="alertsbtn" class="hf" role="menuitem">Briefings<span id="alertsbadge"></span></button>
+    <button type="button" id="voicebtn" class="hf" role="menuitem">Voice &amp; speed</button>
+    <button type="button" id="hf" class="hf" role="menuitem">Hands-free “Hey Timmy”</button>
+    <button type="button" id="facebtn" class="hf" role="menuitem">Avatar</button>
+    <button type="button" id="newchat" class="hf" role="menuitem">New conversation</button>
+  </div>
+  <textarea id="q" rows="1" placeholder="Ask Timmy anything…" aria-label="Message Timmy"></textarea>
+  <button type="submit" id="sendbtn" aria-label="Send"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M3.4 20.4 21 12 3.4 3.6l.02 6.53L15 12 3.42 13.87z" fill="currentColor"/></svg></button>
+</form>
+
+<script src="config.js"></script>
+<script>
+// ---- Brain: Hermes API server, set in config.js (git-ignored, see config.example.js) ----
+const CFG = window.KR_CONFIG || {};
+// Touch devices get "Tap the face"; computers get "Click the face or press Space".
+const TOUCH = matchMedia("(hover: none) and (pointer: coarse)").matches;
+const TAP_HINT = TOUCH ? "Tap the face to talk" : "Click the face or press Space to talk";
+
+// iPhone audio: use an audio session that both plays and records and isn't muted by the silent switch,
+// and unlock audio on the first tap (iOS only lets a page play sound after a user gesture).
+// "play-and-record" (not "playback"): "playback" makes iOS refuse the mic with
+// "AudioSession category is not compatible with audio capture" (seen on an iPhone).
+try { if (navigator.audioSession) navigator.audioSession.type = "play-and-record"; } catch {}
+function unlockAudio() {
+  try {
+    outCtx ||= new (window.AudioContext || window.webkitAudioContext)();
+    outCtx.resume?.();
+    const b = outCtx.createBuffer(1, 1, 22050), src = outCtx.createBufferSource();
+    src.buffer = b; src.connect(outCtx.destination); src.start(0);
+    window.KRAvatar?.head?.audioCtx?.resume?.();
+  } catch {}
+}
+addEventListener("pointerdown", unlockAudio);
+addEventListener("touchend", unlockAudio);
+// Send browser errors to the Mac's log (~/.hermes/logs/timmy-client.log) so phone problems can be debugged.
+function reportError(msg) {
+  try { fetch("/client-log", { method: "POST", body: String(msg).slice(0, 4000) }); } catch {}
+}
+addEventListener("error", e => reportError(`error: ${e.message} @ ${e.filename}:${e.lineno}`));
+addEventListener("unhandledrejection", e => reportError("unhandled: " + (e.reason && (e.reason.stack || e.reason.message) || e.reason)));
+const BRAIN_URL = CFG.brainUrl || "";
+const BRAIN_KEY = CFG.brainKey || "";
+const BRAIN_MODEL = CFG.model || "hermes-agent";
+
+const canvas = document.getElementById("orb");
+const ctx = canvas.getContext("2d");
+const statusEl = document.getElementById("status");
+const logEl = document.getElementById("log");
+let W, H, DPR;
+
+function resize() {
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = canvas.width = innerWidth * DPR;
+  H = canvas.height = innerHeight * DPR;
+}
+addEventListener("resize", resize); resize();
+
+// ---- State ----
+const STATES = {
+  idle:      { label: "Standby",   hint: TAP_HINT, hue: 195, speed: 0.3 },
+  listening: { label: "Listening", hint: "Go ahead…",                              hue: 165, speed: 0.6 },
+  thinking:  { label: "Thinking",  hint: "",                                       hue: 270, speed: 2.2 },
+  speaking:  { label: "Speaking",  hint: "",                                       hue: 35,  speed: 0.8 },
+};
+let state = "idle", hue = 195, level = 0, targetLevel = 0;
+let faceMode = "eyes";   // "eyes" (canvas) or "avatar" (3D, avatar.js)
+let wake = null;         // hands-free "Hey Timmy" capture: {ctx, stream, proc, buf, n, sending}
+
+function setState(s, hint) {
+  if (faceMode === "avatar" && s !== state) window.KRAvatar?.setState(s);
+  state = s;
+  const st = STATES[s];
+  const armed = s === "idle" && wake && hint == null;   // hands-free waiting
+  document.body.classList.toggle("armed", !!armed);
+  statusEl.innerHTML = armed ? `Waiting for “Hey Timmy”<small>${TOUCH ? "or tap the face" : "or click the face / press Space"}</small>`
+                             : `${st.label}<small>${hint ?? st.hint}</small>`;
+}
+
+// ---- Face: glowing ring with two eyes ----
+let rotY = 0, last = performance.now();
+let mouseX = 0, mouseY = 0, mouseAt = 0;   // eye direction toward the cursor, -1..1
+let faceR = 100;                              // current face radius in canvas px (set in draw)
+addEventListener("pointermove", e => {
+  const dx = e.clientX * DPR - W / 2, dy = e.clientY * DPR - H / 2;
+  const d = Math.hypot(dx, dy), reach = Math.min(1, d / (faceR * 2.5));
+  mouseX = d ? dx / d * reach : 0; mouseY = d ? dy / d * reach : 0;
+  mouseAt = performance.now();
+});
+const eye = { x: 0, y: 0, tx: 0, ty: 0, open: 1, blinkAt: performance.now() + 2500, glanceAt: performance.now() + 4000, glance: 0 };
+
+function updateEyes(now, dt) {
+  // blink: quick squash every 2.5–6 s, sometimes a double blink
+  const sinceBlink = now - eye.blinkAt;
+  if (sinceBlink >= 0) {
+    eye.open = sinceBlink < 70 ? 1 - sinceBlink / 70 : sinceBlink < 160 ? (sinceBlink - 70) / 90 : 1;
+    if (sinceBlink >= 160) { eye.open = 1; eye.blinkAt = now + (Math.random() < 0.2 ? 220 : 2500 + Math.random() * 3500); }
+  }
+  // glance: occasional look left/right, otherwise drift toward the mouse
+  if (now > eye.glanceAt) { eye.glance = Math.random() < 0.5 ? 0 : (Math.random() < 0.5 ? -1 : 1); eye.glanceAt = now + 1200 + Math.random() * 3000; }
+  if (state === "thinking") { eye.tx = 0.45 * Math.sin(now / 700); eye.ty = -0.55; }
+  else if (now - mouseAt < 4000) { eye.tx = mouseX; eye.ty = mouseY; }      // follow the cursor
+  else { eye.tx = mouseX * 0.5 + eye.glance * 0.5; eye.ty = mouseY * 0.5; } // idle: occasional glances
+  if (state === "speaking") eye.ty += -0.25 * level * Math.abs(Math.sin(now / 110));
+  eye.x += (eye.tx - eye.x) * Math.min(1, dt * 12);
+  eye.y += (eye.ty - eye.y) * Math.min(1, dt * 12);
+}
+
+function draw(now) {
+  const dt = Math.min((now - last) / 1000, 0.05); last = now;
+  const st = STATES[state];
+  hue += (st.hue - hue) * dt * 3;
+
+  if (state === "speaking") targetLevel = speakingLevel(now);
+  if (state === "thinking") targetLevel = 0.35 + 0.15 * Math.sin(now / 120);
+  if (state === "idle") targetLevel = 0.08 + 0.05 * Math.sin(now / 900);
+  level += (targetLevel - level) * Math.min(1, dt * 10);
+  rotY += dt * st.speed;
+  updateEyes(now, dt);
+
+  ctx.clearRect(0, 0, W, H);
+  // phones: face sits near the top, just under the status line; computers: centred
+  const phone = innerWidth < 700;
+  const cx = W / 2, cy = phone ? Math.max(H * 0.23, (92 + Math.min(W, H) * 0.32 / DPR) * DPR) : H / 2;
+  const breathe = 1 + 0.02 * Math.sin(now / 1100);
+  const R = Math.min(W, H) * 0.15 * breathe * (1 + level * 0.18);
+  faceR = R;
+
+  // soft halo behind the ring
+  const g = ctx.createRadialGradient(cx, cy, R * 0.8, cx, cy, R * 2.3);
+  g.addColorStop(0, `hsla(${hue + 20},100%,60%,${0.16 + level * 0.3})`);
+  g.addColorStop(1, "transparent");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+
+  // the bubble: black disc
+  ctx.fillStyle = "#000";
+  ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fill();
+
+  // neon ring: rotating color sweep (violet → blue → cyan → magenta), several glow passes
+  const spin = rotY * 1.3;
+  const sweep = ctx.createConicGradient ? ctx.createConicGradient(spin, cx, cy) : null;
+  if (sweep) {
+    const h = hue;
+    sweep.addColorStop(0.00, `hsl(${h + 60},100%,62%)`);
+    sweep.addColorStop(0.25, `hsl(${h + 25},100%,62%)`);
+    sweep.addColorStop(0.50, `hsl(${h - 15},100%,60%)`);
+    sweep.addColorStop(0.75, `hsl(${h + 95},100%,62%)`);
+    sweep.addColorStop(1.00, `hsl(${h + 60},100%,62%)`);
+  }
+  const ringW = R * (0.09 + level * 0.06);
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  for (const [blur, alpha, width] of [[R * 0.5, 0.35, 2.4], [R * 0.22, 0.6, 1.4], [R * 0.06, 0.9, 0.7]]) {
+    ctx.shadowBlur = blur; ctx.shadowColor = `hsla(${hue + 30},100%,60%,${alpha})`;
+    ctx.strokeStyle = sweep || `hsl(${hue},100%,62%)`;
+    ctx.globalAlpha = alpha + level * 0.3;
+    ctx.lineWidth = ringW * width;
+    ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.stroke();
+  }
+  // chromatic fringes on the left and right edges
+  ctx.shadowBlur = R * 0.15; ctx.lineWidth = ringW * 0.6;
+  const off = R * 0.025 * (1 + level);
+  ctx.globalAlpha = 0.55;
+  ctx.shadowColor = ctx.strokeStyle = "rgba(255,40,90,.7)";
+  ctx.beginPath(); ctx.arc(cx - off, cy, R, Math.PI * 0.8, Math.PI * 1.2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx + off, cy, R, -Math.PI * 0.2, Math.PI * 0.2); ctx.stroke();
+  ctx.shadowColor = ctx.strokeStyle = "rgba(40,255,200,.5)";
+  ctx.beginPath(); ctx.arc(cx, cy + off, R, Math.PI * 0.3, Math.PI * 0.7); ctx.stroke();
+  ctx.restore();
+
+  // glossy inner edge highlight
+  const gloss = ctx.createRadialGradient(cx, cy, R * 0.75, cx, cy, R * 0.98);
+  gloss.addColorStop(0, "rgba(255,255,255,0)");
+  gloss.addColorStop(1, `hsla(${hue + 40},80%,80%,.10)`);
+  ctx.fillStyle = gloss;
+  ctx.beginPath(); ctx.arc(cx, cy, R * 0.97, 0, Math.PI * 2); ctx.fill();
+
+  // eyes
+  const wide = state === "listening" ? 1.15 + level * 0.25 : state === "thinking" ? 0.8 : 1;
+  const ew = R * 0.26, eh = R * 0.44 * wide * Math.max(0.08, eye.open);
+  const ex = eye.x * R * 0.3, ey = eye.y * R * 0.26 - R * 0.04;
+  ctx.fillStyle = "#fff";
+  ctx.shadowColor = `hsla(${hue},100%,85%,.8)`; ctx.shadowBlur = R * 0.08;
+  for (const side of [-1, 1]) {
+    ctx.beginPath();
+    ctx.ellipse(cx + side * R * 0.24 + ex, cy + ey, ew / 2, eh / 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.shadowBlur = 0;
+
+  // HUD rings and ticks
+  ctx.lineWidth = 1.5 * DPR;
+  ring(cx, cy, R * 1.55, now / 1000 * st.speed,        0.55, `hsla(${hue},100%,65%,.45)`);
+  ring(cx, cy, R * 1.75, -now / 1400 * st.speed,       0.3,  `hsla(${hue},100%,65%,.3)`);
+  ring(cx, cy, R * 1.95, now / 2200 * st.speed + 1,    0.15, `hsla(${hue},100%,65%,.2)`);
+  ticks(cx, cy, R * 2.1, now);
+
+  // small name tag under the face
+  ctx.fillStyle = `hsla(${hue},100%,85%,.85)`;
+  ctx.font = `700 ${Math.round(R * 0.16)}px Orbitron, sans-serif`;
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillText("TIMMY", cx, cy + R * 1.3);
+
+  requestAnimationFrame(draw);
+}
+
+function ring(cx, cy, r, a, frac, color) {
+  ctx.strokeStyle = color;
+  for (let i = 0; i < 3; i++) {
+    const start = a + i * (Math.PI * 2 / 3);
+    ctx.beginPath(); ctx.arc(cx, cy, r, start, start + Math.PI * 2 / 3 * frac); ctx.stroke();
+  }
+}
+function ticks(cx, cy, r, now) {
+  ctx.strokeStyle = `hsla(${hue},100%,70%,.25)`;
+  for (let i = 0; i < 72; i++) {
+    const a = i / 72 * Math.PI * 2 + now / 20000;
+    const len = (i % 6 === 0 ? 10 : 4) * DPR * (1 + level);
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+    ctx.lineTo(cx + Math.cos(a) * (r + len), cy + Math.sin(a) * (r + len));
+    ctx.stroke();
+  }
+}
+requestAnimationFrame(draw);
+
+// ---- Mic level (drives the orb while listening) ----
+let analyser, micData, micStream;
+async function startMic() {
+  try {
+    micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const ac = new (window.AudioContext || window.webkitAudioContext)();
+    const src = ac.createMediaStreamSource(micStream);
+    analyser = ac.createAnalyser(); analyser.fftSize = 512;
+    micData = new Uint8Array(analyser.fftSize);
+    src.connect(analyser);
+    (function loop() {
+      if (!analyser || state !== "listening") return;
+      analyser.getByteTimeDomainData(micData);
+      let sum = 0; for (const v of micData) sum += ((v - 128) / 128) ** 2;
+      targetLevel = Math.min(1, Math.sqrt(sum / micData.length) * 6);
+      requestAnimationFrame(loop);
+    })();
+  } catch { /* mic denied: the orb still animates */ }
+}
+// One microphone stream for the whole conversation (Hermes voice path). iPhone home-screen apps often
+// refuse repeated getUserMedia calls, especially ones not started by a tap, so ask once and reuse it.
+let sharedMic = null, micReleaseTimer = 0;
+async function getMic() {
+  clearTimeout(micReleaseTimer);
+  if (sharedMic && sharedMic.getAudioTracks().some(t => t.readyState === "live")) return sharedMic;
+  sharedMic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+  return sharedMic;
+}
+function releaseMicSoon() {   // turn the mic (and the orange dot) off 30 s after the conversation ends
+  clearTimeout(micReleaseTimer);
+  micReleaseTimer = setTimeout(() => {
+    if (!convo && !wake && !recorder && !barge) { sharedMic?.getTracks().forEach(t => t.stop()); sharedMic = null; }
+  }, 30000);
+}
+function stopMic() {
+  if (micStream && micStream !== sharedMic) micStream.getTracks().forEach(t => t.stop());
+  analyser = null;
+  releaseMicSoon();
+}
+
+// ---- Speech in ----
+// Hermes voice (served by server/timmy_server.py): record here, transcribe with Hermes' local Whisper,
+// speak with Hermes' TTS (Piper). Falls back to the browser's Web Speech API otherwise.
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null, hermesVoice = false, recorder = null, player = null;
+document.getElementById("voice").textContent = SR ? "READY" : "TEXT ONLY";
+if (CFG.hermesVoice !== false) {
+  fetch("/voice/status").then(r => r.ok ? r.json() : null).then(j => {
+    if (j?.ok && window.MediaRecorder) {
+      hermesVoice = true;
+      document.getElementById("voice").textContent = "HERMES · " + String(j.tts).toUpperCase();
+      let hf = null; try { hf = localStorage.getItem("kr.handsfree"); } catch {}
+      if (hf === "1") startWake();
+    }
+  }).catch(() => {});
+}
+
+function stopSpeaking() {
+  speechSynthesis.cancel();
+  if (player) { player.pause(); player = null; }
+}
+
+async function listenHermes() {
+  if (recorder) { recorder.stop(); return; }
+  stopSpeaking();
+  let stream;
+  try { stream = await getMic(); }
+  catch (e) {
+    convo = false;
+    reportError(`mic: ${e && e.name}: ${e && e.message} | secure=${isSecureContext} standalone=${navigator.standalone}`);
+    setState("idle", e && e.name === "NotAllowedError" ? "Microphone blocked: allow it for this page"
+                                                      : `Microphone error: ${e && (e.name || e.message)}`);
+    return;
+  }
+  micStream = stream;
+  const ac = new (window.AudioContext || window.webkitAudioContext)();
+  analyser = ac.createAnalyser(); analyser.fftSize = 512;
+  micData = new Uint8Array(analyser.fftSize);
+  ac.createMediaStreamSource(stream).connect(analyser);
+
+  const chunks = [];
+  recorder = new MediaRecorder(stream);
+  recorder.ondataavailable = e => e.data.size && chunks.push(e.data);
+  recorder.onstop = async () => {
+    const heard = spoke;
+    recorder = null; stopMic(); ac.close();
+    if (!heard) { endConvo(); return; }
+    setState("thinking", "Transcribing…");
+    try {
+      const blob = new Blob(chunks, { type: chunks[0]?.type || "audio/webm" });
+      const r = await fetch("/voice/transcribe", { method: "POST", headers: { "Content-Type": blob.type }, body: blob });
+      const j = await r.json();
+      if (!j.transcript) { convo ? setTimeout(listenHermes, 200) : setState("idle", "Didn't catch that"); return; }
+      if (convo && GOODBYE.test(j.transcript.trim())) { addMsg("you", j.transcript); convo = false; say("Anytime."); return; }
+      handle(j.transcript);
+    } catch { setState("idle", "Transcription failed"); }
+  };
+
+  // Stop after ~1.3 s of silence once speech started; give up after 8 s of nothing.
+  // End of turn: wait PAUSE_MS of quiet after speech (VOICE panel → "Wait for me"), so a thinking pause
+  // mid-sentence doesn't cut you off. "Quiet" is measured against this room's noise floor, so soft speech
+  // still counts as speech. Up to 60 s per turn.
+  const started = performance.now(), pauseMs = pauseSetting();
+  let spoke = false, quietSince = 0, floor = 0.01;
+  (function watch(now = performance.now()) {
+    if (!recorder || !analyser) return;
+    analyser.getByteTimeDomainData(micData);
+    let sum = 0; for (const v of micData) sum += ((v - 128) / 128) ** 2;
+    const rms = Math.sqrt(sum / micData.length);
+    targetLevel = Math.min(1, rms * 6);
+    if (now - started < 300) floor = Math.max(floor, rms);          // first 0.3 s: learn the room's noise
+    const loud = rms > Math.max(0.02, floor * 2.2);
+    if (loud) { spoke = true; quietSince = 0; }
+    else if (spoke) quietSince ||= now;
+    if ((spoke && quietSince && now - quietSince > pauseMs) || now - started > 60000 || (!spoke && now - started > 8000)) {
+      recorder.stop(); return;
+    }
+    requestAnimationFrame(watch);
+  })();
+  recorder.start();
+  setState("listening", convo ? "Listening… (say “thanks” or click to finish)" : "Go ahead… (click again to stop)");
+}
+
+// How long Timmy waits after you stop talking before it answers (ms); set in the VOICE panel.
+function pauseSetting() { try { return +localStorage.getItem("kr.pauseMs") || 1800; } catch { return 1800; } }
+
+// ---- Conversation mode ----
+// Click / Space / "Hey Timmy" starts a conversation: after each reply Timmy listens again, until ~8 s of
+// silence, a goodbye ("thanks", "that's all", "bye", "stop"), or another click.
+let convo = false;
+const GOODBYE = /^(ok(ay)?[, ]+)?(thanks?( you)?( timmy)?|that'?s (all|it)|bye|goodbye|good night|stop|never ?mind|we'?re done|i'?m done)[.!]*$/i;
+function startConvo() { convo = true; listenHermes(); }
+// One path for "Timmy finished speaking", whatever face or voice is used.
+function replyFinished() {
+  player = null; stopBargeIn(); setState("idle");
+  if (convo) setTimeout(() => { if (convo && !recorder && !player && state === "idle") listenHermes(); }, 250);
+}
+// Watchdog: in a conversation, never sit idle; if a playback "ended" event was missed, listen again.
+let idleSince = 0;
+setInterval(() => {
+  if (!convo || recorder || player || state !== "idle") { idleSince = 0; return; }
+  idleSince ||= performance.now();
+  if (performance.now() - idleSince > 1500) { idleSince = 0; listenHermes(); }
+}, 300);
+function endConvo() {
+  convo = false;
+  if (recorder) recorder.stop();
+  stopSpeaking(); stopBargeIn();
+  setState("idle", `Conversation ended. ${TOUCH ? "Tap the face" : "Click, press Space"} or say “Hey Timmy”.`);
+}
+
+function listen() {
+  if (hermesVoice) {
+    if (convo || recorder || player) endConvo(); else startConvo();
+    return;
+  }
+  if (!SR) { document.getElementById("q").focus(); return; }
+  if (state === "listening") { rec?.stop(); return; }
+  speechSynthesis.cancel();
+  rec = new SR(); rec.lang = "en-US"; rec.interimResults = true;
+  let finalText = "";
+  rec.onresult = e => {
+    const t = Array.from(e.results).map(r => r[0].transcript).join("");
+    finalText = t;
+    setState("listening", t);
+  };
+  rec.onend = () => { stopMic(); if (finalText.trim()) handle(finalText.trim()); else setState("idle"); };
+  rec.onerror = () => { stopMic(); setState("idle"); };
+  setState("listening"); startMic(); rec.start();
+}
+canvas.addEventListener("click", listen);
+addEventListener("keydown", e => {
+  if (e.code === "Space" && !["INPUT", "TEXTAREA"].includes(document.activeElement.tagName)) { e.preventDefault(); listen(); }
+});
+
+// ---- Hands-free "Hey Timmy" ----
+// The mic stays open; 16 kHz PCM goes to server/timmy_server.py, which runs Hermes' on-device wake-word engine.
+// Nothing leaves the Mac. Detection is paused while Timmy is listening, thinking or speaking.
+const wakeEl = document.getElementById("wake"), hfBtn = document.getElementById("hf");
+const wakeSid = (crypto.randomUUID && crypto.randomUUID()) || String(Math.random()).slice(2);
+
+function showWake(text, paused) {
+  wakeEl.className = wake ? "on" + (paused ? " paused" : "") : "";
+  wakeEl.querySelector("span").textContent = text;
+  hfBtn.classList.toggle("on", !!wake);
+  if (state === "idle" && !recorder) setState("idle");
+  document.getElementById("wakestat").textContent = wake ? (paused ? "PAUSED" : "ON") : "OFF";
+}
+
+async function startWake() {
+  if (wake || !hermesVoice) return;
+  let stream;
+  try { stream = await getMic(); }
+  catch { addMsg("kr", "I need the microphone for hands-free mode."); setHandsFree(false); return; }
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const src = ctx.createMediaStreamSource(stream);
+  const proc = ctx.createScriptProcessor(4096, 1, 1);
+  const ratio = ctx.sampleRate / 16000;
+  wake = { ctx, stream, proc, buf: new Int16Array(8000), n: 0, sending: false };
+  proc.onaudioprocess = e => {
+    if (!wake) return;
+    const inp = e.inputBuffer.getChannelData(0);
+    if (state !== "idle" || recorder) { wake.n = 0; return; }       // only listen for the phrase when idle
+    for (let i = 0; i < inp.length / ratio; i++) {
+      const v = Math.max(-1, Math.min(1, inp[Math.floor(i * ratio)]));
+      wake.buf[wake.n++] = v * 32767;
+      if (wake.n === wake.buf.length) { sendWake(wake.buf.slice()); wake.n = 0; }
+    }
+  };
+  src.connect(proc); proc.connect(ctx.destination);   // ScriptProcessor needs a sink; it outputs silence
+  if (ctx.state === "suspended") {
+    showWake("Hands-free: click anywhere to activate", true);
+    addEventListener("pointerdown", () => ctx.resume().then(() => showWake("Hands-free: say “Hey Timmy”")), { once: true });
+  } else showWake("Hands-free: say “Hey Timmy”");
+}
+
+async function sendWake(pcm) {
+  try {
+    const r = await fetch("/wake/feed?s=" + wakeSid, { method: "POST", body: pcm.buffer });
+    const j = await r.json();
+    if (j.detected && state === "idle" && !recorder) {
+      showWake("Heard “Hey Timmy”…", true);
+      if (j.text && j.text.split(/\s+/).length >= 2) { convo = true; handle(j.text); }   // "Hey Timmy, what's the weather?"
+      else startConvo();
+    }
+  } catch { /* server restarting: keep trying */ }
+}
+
+function stopWake() {
+  if (!wake) return;
+  wake.proc.disconnect(); wake.ctx.close();
+  wake = null; showWake(""); releaseMicSoon();
+}
+
+function setHandsFree(on) {
+  try { localStorage.setItem("kr.handsfree", on ? "1" : "0"); } catch {}
+  on ? startWake() : stopWake();
+}
+hfBtn.addEventListener("click", () => setHandsFree(!wake));
+// keep the pill in sync with Timmy's state
+setInterval(() => { if (wake && wake.ctx.state === "running") showWake(state === "idle" ? "Hands-free: say “Hey Timmy”" : "Hands-free paused while Timmy is busy", state !== "idle"); }, 500);
+
+// ---- Barge-in: talking over Timmy stops the reply and listens ----
+let barge = null;
+async function startBargeIn() {
+  if (!convo || barge) return;
+  try {
+    const stream = await getMic();
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const an = ctx.createAnalyser(); an.fftSize = 512; ctx.createMediaStreamSource(stream).connect(an);
+    const data = new Uint8Array(an.fftSize);
+    barge = { stream, ctx };
+    const t0 = performance.now(); let loudSince = 0;
+    (function loop(now = performance.now()) {
+      if (!barge || !player) return;
+      an.getByteTimeDomainData(data);
+      let sum = 0; for (const v of data) sum += ((v - 128) / 128) ** 2;
+      const rms = Math.sqrt(sum / data.length);
+      // ignore the first 0.5 s and require ~0.3 s of clear speech, so Timmy's own voice doesn't trigger it
+      if (now - t0 > 500 && rms > 0.09) { loudSince ||= now; if (now - loudSince > 300) { stopSpeaking(); stopBargeIn(); setState("idle"); listenHermes(); return; } }
+      else loudSince = 0;
+      requestAnimationFrame(loop);
+    })();
+  } catch { barge = null; }
+}
+function stopBargeIn() {
+  if (!barge) return;
+  barge.ctx.close(); barge = null; releaseMicSoon();
+}
+
+// ---- Face: neon eyes (canvas) or 3D avatar (avatar.js, loaded on demand) ----
+const faceBtn = document.getElementById("facebtn");
+function loadAvatarModule() {
+  if (window.KRAvatar) return Promise.resolve();
+  return new Promise((res, rej) => {
+    addEventListener("kravatar-ready", res, { once: true });
+    const el = document.createElement("script"); el.type = "module"; el.src = "avatar.js"; el.onerror = rej;
+    document.head.append(el);
+  });
+}
+async function setFace(mode) {
+  try { localStorage.setItem("kr.face", mode); } catch {}
+  faceMode = mode;
+  document.body.classList.toggle("avatar-mode", mode === "avatar");
+  faceBtn.textContent = mode === "avatar" ? "Neon eyes" : "3D avatar";
+  if (mode !== "avatar") return;
+  const loading = document.getElementById("avatarload");
+  loading.style.display = "block";
+  try {
+    await loadAvatarModule();
+    const attempt = () => Promise.race([KRAvatar.start(),
+      new Promise((_, rej) => setTimeout(() => rej(new Error("timed out after 90 s")), 90000))]);
+    try { await attempt(); }
+    catch (e) { reportError("avatar load, retrying: " + (e && e.message)); KRAvatar.reset?.(); await attempt(); }
+  }
+  catch (e) {
+    reportError("avatar load: " + (e && (e.stack || e.message) || e));
+    addMsg("kr", "The 3D avatar didn't load (" + (e && e.message || e) + "), so I'm back to the eyes.");
+    setFace("eyes");
+  }
+  finally { loading.style.display = "none"; }
+}
+faceBtn.addEventListener("click", () => setFace(faceMode === "avatar" ? "eyes" : "avatar"));
+document.getElementById("avatar").addEventListener("click", listen);
+// The 3D avatar is hidden by default: set showAvatar: true in config.js to bring back
+// the AVATAR button and the Male/Female choice. The code stays in place.
+const SHOW_AVATAR = CFG.showAvatar === true;
+if (!SHOW_AVATAR) {
+  faceBtn.style.display = "none";
+  document.querySelector('#voicepanel [data-avatar]')?.closest(".vp-row")?.style.setProperty("display", "none");
+  document.querySelector("#voicepanel .vp-head b").textContent = "Voice";
+} else {
+  try { if (localStorage.getItem("kr.face") === "avatar") setFace("avatar"); } catch {}
+}
+
+async function sayAvatar(text) {
+  setState("thinking", "Preparing voice…");
+  stopSpeaking();
+  const handle = { pause: () => KRAvatar.stop() };   // lets stopSpeaking() and barge-in stop the avatar
+  player = handle;
+  await KRAvatar.say(text, () => { speakStart = performance.now(); setState("speaking", ""); startBargeIn(); });
+  if (player !== handle) return;                       // interrupted (barge-in or click)
+  replyFinished();
+}
+
+// ---- ☰ menu ----
+const menuEl = document.getElementById("menu"), menuBtn = document.getElementById("menubtn");
+function closeMenu() { menuEl.classList.remove("open"); menuBtn.setAttribute("aria-expanded", "false"); }
+menuBtn.addEventListener("click", e => {
+  e.stopPropagation();
+  const open = !menuEl.classList.contains("open");
+  menuEl.classList.toggle("open", open); menuBtn.setAttribute("aria-expanded", String(open));
+});
+menuEl.addEventListener("click", () => setTimeout(closeMenu, 0));   // each item runs its own handler, then the menu closes
+addEventListener("pointerdown", e => { if (!menuEl.contains(e.target) && e.target !== menuBtn) closeMenu(); });
+
+// ---- Briefings panel ----
+// Shows the recent daily briefings (via /alerts). The badge counts items
+const ap = document.getElementById("alertspanel"), apBadge = document.getElementById("alertsbadge");
+let ALERTS = null;
+const apSeen = () => { try { return localStorage.getItem("kr.alertsSeen") || ""; } catch { return ""; } };
+const linkify = t => esc(t).replace(/(https?:\/\/[^\s)<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
+const when = iso => { if (!iso) return "—"; const d = new Date(iso); return isNaN(d) ? iso : d.toLocaleString([], { weekday: "short", hour: "numeric", minute: "2-digit" }); };
+async function loadAlerts() {
+  try { ALERTS = await (await fetch("/alerts")).json(); } catch { return; }
+  const seen = apSeen(), unread = ALERTS.items.filter(i => i.time > seen).length;
+  apBadge.textContent = unread; apBadge.classList.toggle("on", unread > 0);
+  const mb = document.getElementById("menubadge"); mb.textContent = unread; mb.classList.toggle("on", unread > 0);
+}
+function renderAlerts() {
+  const seen = apSeen();
+  document.getElementById("ap-items").innerHTML = ALERTS.items.length ? ALERTS.items.map(i =>
+    `<div class="ap-i ${i.kind} ${i.time > seen ? "unread" : ""}"><div class="t"><span>${esc(i.source)}</span><span>${esc(i.time)}</span></div>` +
+    `<div class="h">${esc(i.title)}</div><div class="b">${linkify(i.text)}</div></div>`).join("")
+    : `<div class="ap-empty">No briefings yet. Say “brief me”.</div>`;
+}
+async function openAlerts() {
+  vp.classList.remove("open");
+  await loadAlerts(); if (!ALERTS) return;
+  renderAlerts(); ap.classList.add("open");
+  const newest = ALERTS.items[0]?.time; if (newest) try { localStorage.setItem("kr.alertsSeen", newest); } catch {}
+  apBadge.classList.remove("on"); document.getElementById("menubadge").classList.remove("on");
+}
+document.getElementById("alertsbtn").onclick = () => ap.classList.contains("open") ? ap.classList.remove("open") : openAlerts();
+ap.querySelector(".vp-x").onclick = () => ap.classList.remove("open");
+document.getElementById("ap-items").addEventListener("click", e => { if (e.target.tagName !== "A") e.target.closest(".ap-i")?.classList.toggle("open"); });
+loadAlerts(); setInterval(loadAlerts, 120000);
+
+// ---- Voice & avatar picker ----
+const vp = document.getElementById("voicepanel"), vpList = document.getElementById("vp-list");
+const vpSpeed = document.getElementById("vp-speed"), vpSpeedVal = document.getElementById("vp-speedval");
+let VOICES = [], vpFilter = "male", vpCurrent = "", vpAudio = null, vpEngine = "kokoro";
+const engineOf = id => id.startsWith("kokoro:") ? "kokoro" : id.startsWith("orpheus:") ? "orpheus" : "piper";
+// Piper length_scale: >1 is slower. The slider shows "faster" to the right, so invert it.
+const speedToScale = v => +(2.5 - v).toFixed(2), scaleToSpeed = s => +(2.5 - s).toFixed(2);
+function speedLabel() { const ls = speedToScale(+vpSpeed.value); vpSpeedVal.textContent = ls >= 1.05 ? "slower" : ls <= 0.95 ? "faster" : "normal"; }
+async function openVoicePanel() {
+  const st = await (await fetch("/voice/status")).json();
+  vpCurrent = st.voice || ""; vpSpeed.value = scaleToSpeed(st.length_scale || 1); speedLabel();
+  vpEngine = engineOf(vpCurrent);
+  if (!VOICES.length) VOICES = (await (await fetch("/voice/voices")).json()).voices;
+  let av = "male"; try { av = localStorage.getItem("kr.avatarModel") || "male"; } catch {}
+  vp.querySelectorAll("[data-avatar]").forEach(b => b.classList.toggle("on", b.dataset.avatar === av));
+  renderVoices(); ap.classList.remove("open"); vp.classList.add("open");
+}
+function renderVoices() {
+  vp.querySelectorAll("[data-filter]").forEach(b => b.classList.toggle("on", b.dataset.filter === vpFilter));
+  vp.querySelectorAll("[data-engine]").forEach(b => b.classList.toggle("on", b.dataset.engine === vpEngine));
+  vpSpeed.closest(".vp-row").style.opacity = vpEngine === "orpheus" ? .4 : 1;   // Orpheus has no speed control
+  const list = VOICES.filter(v => (v.engine || "piper") === vpEngine)
+                     .filter(v => vpFilter === "all" || (vpFilter === "male" ? /\bmale\b/i.test(v.about) : /female/i.test(v.about)));
+  vpList.innerHTML = list.map(v => {
+    const cur = v.id ? vpCurrent === v.id : vpCurrent.split("-")[1] === v.name;
+    return `<div class="vp-v"><button type="button" class="play" data-v="${v.id || v.name}" title="Play a sample">▶</button>` +
+      `<span class="nm">${v.name.replace(/_/g, " ")} <small>${v.about.replace(", natural", "").replace(", most human", "")}</small></span>` +
+      `<button type="button" class="use ${cur ? "on" : ""}" data-v="${v.id || v.name}">${cur ? "In use" : "Use"}</button></div>`;
+  }).join("");
+}
+vpList.addEventListener("click", async e => {
+  const b = e.target.closest("button"); if (!b) return;
+  const ls = speedToScale(+vpSpeed.value);
+  if (b.classList.contains("play")) {
+    vpAudio?.pause(); b.textContent = "…";
+    vpAudio = new Audio(`/voice/sample?voice=${encodeURIComponent(b.dataset.v)}&length_scale=${ls}`);
+    vpAudio.onplaying = () => b.textContent = "■"; vpAudio.onended = vpAudio.onerror = () => b.textContent = "▶";
+    vpAudio.play().catch(() => b.textContent = "▶");
+  } else if (b.classList.contains("use")) {
+    b.textContent = "Saving…";
+    const j = await (await fetch("/voice/set", { method: "POST", headers: { "Content-Type": "application/json" },
+                                             body: JSON.stringify({ voice: b.dataset.v, length_scale: ls }) })).json();
+    if (j.ok) { vpCurrent = j.voice; renderVoices(); addMsg("kr", `Voice set to ${b.dataset.v.replace(/^(kokoro|orpheus):(a[mf]_|b[mf]_)?/, "").replace(/_/g, " ")} (${engineOf(j.voice)}${engineOf(j.voice) === "orpheus" ? "" : ", " + vpSpeedVal.textContent}).`); }
+  }
+});
+vpSpeed.addEventListener("input", speedLabel);
+vpSpeed.addEventListener("change", async () => {   // save speed for the current voice right away
+  if (!vpCurrent) return;
+  await fetch("/voice/set", { method: "POST", headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ voice: vpCurrent, length_scale: speedToScale(+vpSpeed.value) }) });
+});
+vp.querySelectorAll("[data-filter]").forEach(b => b.onclick = () => { vpFilter = b.dataset.filter; renderVoices(); });
+vp.querySelectorAll("[data-engine]").forEach(b => b.onclick = () => { vpEngine = b.dataset.engine; renderVoices(); });
+// "Wait for me": how long a pause ends your turn
+const vpPause = document.getElementById("vp-pause");
+const markPause = () => vpPause.querySelectorAll("button").forEach(b => b.classList.toggle("on", +b.dataset.ms === pauseSetting()));
+vpPause.querySelectorAll("button").forEach(b => b.onclick = () => { try { localStorage.setItem("kr.pauseMs", b.dataset.ms); } catch {} markPause(); });
+markPause();
+vp.querySelectorAll("[data-avatar]").forEach(b => b.onclick = () => {
+  try { localStorage.setItem("kr.avatarModel", b.dataset.avatar); } catch {}
+  if (faceMode === "avatar") location.reload(); else setFace("avatar").then(() => location.reload());
+});
+vp.querySelector(".vp-x").onclick = () => { vpAudio?.pause(); vp.classList.remove("open"); };
+document.getElementById("voicebtn").onclick = () => vp.classList.contains("open") ? vp.classList.remove("open") : openVoicePanel();
+
+// ---- Info bubbles ----
+// When Timmy talks about a project or a skill, show what it is (from the topic files and skill outputs,
+// served by /cards) in a bubble beside the face. Up to 3 at a time; click to expand, × to dismiss.
+let CARDS = [], lastUserText = "";
+async function loadCards() { try { CARDS = (await (await fetch("/cards")).json()).cards; } catch { CARDS = []; } }
+loadCards();
+const bubblesEl = document.getElementById("bubbles");
+const esc = t => t.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+function lineHtml(t) {   // "text ⟶ https://…" becomes a link
+  const [label, url] = t.split(" ⟶ ");
+  return url ? `<a href="${esc(url)}" target="_blank" rel="noopener">${esc(label)}</a>` : esc(label);
+}
+function matchCards(text) {
+  const t = " " + text.toLowerCase().replace(/[^a-z0-9'+ ]+/g, " ") + " ";
+  const hits = CARDS.map(c => ({ c, n: c.keys.filter(k => t.includes(" " + k.toLowerCase() + " ")).length })).filter(x => x.n);
+  return hits.sort((a, b) => b.n - a.n).map(x => x.c);
+}
+function showBubble(c) {
+  if ([...bubblesEl.children].some(b => b.dataset.title === c.title)) return;
+  const phone = innerWidth < 700;
+  while (bubblesEl.children.length >= (phone ? 2 : 3)) bubblesEl.firstElementChild.remove();
+  const b = document.createElement("div");
+  b.className = "bubble"; b.dataset.title = c.title;
+  const lines = c.lines?.length ? c.lines : [c.detail].filter(Boolean);
+  const vis = c.kind === "overview" ? (phone ? 3 : 8) : (phone ? 1 : 2);
+  b.innerHTML = `<span class="bx" title="Dismiss" role="button" aria-label="Dismiss">×</span><div class="bt"><b>${esc(c.title)}</b><i>${esc(c.status)}</i></div>` +
+    `<ul>${lines.map((l, i) => `<li class="${i >= vis ? "more" : ""}">${lineHtml(l)}</li>`).join("")}</ul>` +
+    (lines.length > vis ? `<div class="hint">click for ${lines.length - vis} more</div>` : "");
+  b.querySelector(".bx").onclick = e => { e.stopPropagation(); fadeBubble(b, 0); };
+  b.onclick = e => { if (e.target.tagName !== "A") b.classList.toggle("open"); };
+  b.addEventListener("mouseenter", () => clearTimeout(b._t));
+  bubblesEl.append(b);
+  fadeBubble(b, 45000);
+  glanceAt(b);
+}
+// The same topic/skill cards inside Timmy's chat message, like link previews in a messaging app.
+// Collapsed: title, status and the first line; tap to see every line.
+function attachCards(msgEl, cards) {
+  if (!msgEl || !cards.length) return;
+  const box = document.createElement("div"); box.className = "icards";
+  cards.forEach(c => {
+    const lines = c.lines?.length ? c.lines : [c.detail].filter(Boolean);
+    const d = document.createElement("div"); d.className = "icard";
+    d.innerHTML = `<div class="ic-t"><b>${esc(c.title)}</b>${c.status ? `<i>${esc(c.status)}</i>` : ""}</div>` +
+      (lines.length ? `<ul>${lines.map((l, i) => `<li class="${i ? "more" : ""}">${lineHtml(l)}</li>`).join("")}</ul>` : "") +
+      (lines.length > 1 ? `<div class="ic-more">${lines.length - 1} more ▾</div>` : "");
+    if (lines.length > 1) d.onclick = e => {
+      if (e.target.tagName === "A") return;
+      d.classList.toggle("open");
+      d.querySelector(".ic-more").textContent = d.classList.contains("open") ? "less ▴" : `${lines.length - 1} more ▾`;
+    };
+    box.append(d);
+  });
+  msgEl.append(box);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+function fadeBubble(b, ms) {
+  clearTimeout(b._t);
+  b._t = setTimeout(() => { b.classList.add("out"); setTimeout(() => b.remove(), 650); }, ms);
+}
+function glanceAt(el) {   // the face looks toward a new bubble for a moment
+  const r = el.getBoundingClientRect();
+  if (faceMode === "avatar") window.KRAvatar?.head?.lookAt(r.left, r.top + 20, 900);
+  else { eye.glance = r.left > innerWidth / 2 ? 1 : -1; eye.glanceAt = performance.now() + 1500; mouseAt = 0; }
+}
+function bubblesFor(reply) {
+  if (!CARDS.length) return [];
+  const asked = lastUserText.toLowerCase();
+  let picks = matchCards(reply + " " + lastUserText);
+  if (/what'?s open|what am i working on|my projects|all (my )?(topics|projects)|status of everything/.test(asked))
+    picks = CARDS.filter(c => c.kind === "project").concat(picks);
+  const seen = new Set();
+  picks = picks.filter(c => !seen.has(c.title) && seen.add(c.title));
+  const projects = picks.filter(c => c.kind === "project"), skills = picks.filter(c => c.kind === "skill");
+  let show;
+  if (projects.length > 2) {
+    // Many projects: one overview bubble listing every one of them (click to expand), plus up to 2 skills.
+    const overview = { kind: "overview", title: `Projects (${projects.length})`, status: "Overview",
+      lines: projects.map(c => `${c.title} · ${c.status}${c.detail ? " · " + c.detail.replace(/^(Next|Open): /, "") : ""}`) };
+    show = [overview, ...skills.slice(0, 2)];
+  } else show = [...projects, ...skills].slice(0, 3);
+  if (innerWidth >= 700) show.forEach((c, i) => setTimeout(() => showBubble(c), 250 + i * 450));   // phones: cards live in the chat only
+  return show;
+}
+
+// ---- Speech out ----
+let speakStart = 0, outCtx = null, outAnalyser = null, outData = null;
+function speakingLevel(now) {
+  if (outAnalyser && player) {   // real level of the Piper reply
+    outAnalyser.getByteTimeDomainData(outData);
+    let sum = 0; for (const v of outData) sum += ((v - 128) / 128) ** 2;
+    return Math.min(1, 0.15 + Math.sqrt(sum / outData.length) * 4);
+  }
+  const t = (now - speakStart) / 1000;
+  return 0.35 + 0.3 * Math.abs(Math.sin(t * 9) * Math.sin(t * 3.3));
+}
+function analyseOutput(audio) {
+  try {
+    outCtx ||= new (window.AudioContext || window.webkitAudioContext)();
+    outCtx.resume?.();
+    outAnalyser = outCtx.createAnalyser(); outAnalyser.fftSize = 512;
+    outData = new Uint8Array(outAnalyser.fftSize);
+    const src = outCtx.createMediaElementSource(audio);
+    src.connect(outAnalyser); outAnalyser.connect(outCtx.destination);
+  } catch { outAnalyser = null; }
+}
+async function say(text) {
+  addMsg("kr", text);
+  attachCards(logEl.lastElementChild, bubblesFor(text));
+  if (hermesVoice && faceMode === "avatar" && window.KRAvatar?.loaded) {
+    try { await sayAvatar(text); return; } catch { /* fall back to the plain Piper player */ }
+  }
+  if (hermesVoice) {
+    try {
+      setState("thinking", "Preparing voice…");
+      const r = await fetch("/voice/speak", { method: "POST", headers: { "Content-Type": "application/json" },
+                                              body: JSON.stringify({ text }) });
+      if (!r.ok) throw new Error("tts " + r.status);
+      // Play through one Web Audio context (unlocked by the first tap): works on iPhone, where a new
+      // <audio> element started after a network wait is often blocked.
+      const data = await r.arrayBuffer();
+      stopSpeaking();
+      outCtx ||= new (window.AudioContext || window.webkitAudioContext)();
+      if (outCtx.state === "suspended") await outCtx.resume();
+      const buf = await outCtx.decodeAudioData(data);
+      const src = outCtx.createBufferSource();
+      outAnalyser = outCtx.createAnalyser(); outAnalyser.fftSize = 512; outData = new Uint8Array(outAnalyser.fftSize);
+      src.buffer = buf; src.connect(outAnalyser); outAnalyser.connect(outCtx.destination);
+      const me = { pause: () => { try { src.stop(); } catch {} } };
+      player = me;
+      src.onended = () => { if (player === me) replyFinished(); };
+      src.start();
+      speakStart = performance.now(); setState("speaking", ""); startBargeIn();
+      return;
+    } catch { /* fall through to the browser voice */ }
+  }
+  if (!("speechSynthesis" in window)) { setState("idle"); return; }
+  const u = new SpeechSynthesisUtterance(text);
+  const voices = speechSynthesis.getVoices();
+  const wanted = CFG.voice ? new RegExp(CFG.voice, "i") : /Daniel|Samantha|Google UK English Male/;
+  u.voice = voices.find(v => wanted.test(v.name)) || null;
+  u.rate = CFG.rate ?? 1.02;
+  u.pitch = CFG.pitch ?? 1;
+  u.onstart = () => { speakStart = performance.now(); setState("speaking", ""); };
+  u.onend = () => replyFinished();
+  speechSynthesis.speak(u);
+  // Some browsers never fire onstart (no voices installed): don't get stuck on "Thinking"
+  setTimeout(() => { if (state === "thinking") setState("idle"); }, 2000);
+}
+
+// ---- Chat ----
+const chatHistory = [{ role: "system", content: "You are Timmy, a personal assistant, talking by voice on the user's HUD page. " +
+  "Replies are spoken aloud: keep them to one to three short sentences, no markdown, no lists, unless the user asks for detail. Be friendly." }];
+function addMsg(who, text) {
+  const d = document.createElement("div");
+  d.className = "msg " + who;
+  d.innerHTML = `<b>${who === "kr" ? "Timmy" : "YOU"}</b>`;
+  d.append(text);
+  logEl.append(d); logEl.scrollTop = logEl.scrollHeight;
+  return d;
+}
+
+document.getElementById("ask").addEventListener("submit", e => {
+  e.preventDefault();
+  const q = document.getElementById("q");
+  if (q.value.trim()) handle(q.value.trim());
+  q.value = ""; growBox();
+});
+// Enter sends, Shift+Enter adds a line (on phones the return key adds a line; tap ➤ to send)
+const qBox = document.getElementById("q");
+function growBox() {
+  qBox.style.height = "auto";
+  const cs = getComputedStyle(qBox), h = Math.max(parseFloat(cs.minHeight) || 0, Math.min(qBox.scrollHeight + 2, parseFloat(cs.maxHeight)));
+  qBox.style.height = h + "px";
+  document.body.style.setProperty("--ask-extra", Math.max(0, qBox.offsetHeight - (innerWidth < 700 ? 48 : 46)) + "px");   // chat moves up as the box grows
+  logEl.scrollTop = logEl.scrollHeight;
+}
+qBox.addEventListener("input", growBox);
+qBox.addEventListener("keydown", e => {
+  if (e.key === "Enter" && !e.shiftKey && !e.isComposing && !matchMedia("(pointer: coarse)").matches) {
+    e.preventDefault(); document.getElementById("ask").requestSubmit();
+  }
+});
+
+async function handle(text) {
+  addMsg("you", text);
+  lastUserText = text;
+  loadCards();   // pick up topic/skill changes Timmy just made
+  setState("thinking");
+  const voiceReply = await voiceSkill(text);
+  if (voiceReply) { say(voiceReply); return; }
+  const local = localSkill(text);
+  if (local) { setTimeout(() => say(local), 500); return; }
+  if (BRAIN_URL && hermesVoice) {
+    try { await streamReply(text); return; }
+    catch (e) { reportError("stream: " + (e && e.message)); chatHistory.pop(); }   // fall back to one-shot below
+  }
+  if (BRAIN_URL) {
+    try {
+      chatHistory.push({ role: "user", content: text });
+      const r = await fetch(BRAIN_URL, {
+        method: "POST", headers: { "Content-Type": "application/json", ...(BRAIN_KEY && { Authorization: "Bearer " + BRAIN_KEY }) },
+        body: JSON.stringify({ model: BRAIN_MODEL, messages: chatHistory }),
+      });
+      const j = await r.json();
+      const reply = j.choices?.[0]?.message?.content?.trim() || "I got an empty answer.";
+      chatHistory.push({ role: "assistant", content: reply });
+      document.getElementById("brain").textContent = "ONLINE";
+      say(reply); return;
+    } catch {
+      document.getElementById("brain").textContent = "ERROR";
+    }
+  }
+  setTimeout(() => say("My brain isn't connected yet. Once Hermes is set up, I'll be able to answer that."), 600);
+}
+
+// ---- Streaming replies ----
+// Read Timmy's answer as it's written (server-sent events) and speak it sentence by sentence: the first
+// sentence starts playing while the rest is still being generated. Audio for the next sentence is fetched
+// while the current one plays. Works with both faces; barge-in / click stops the whole queue.
+class SpeechQueue {
+  constructor() { this.items = []; this.ended = false; this.cancelled = false; this.playing = false; this.started = false; }
+  push(sentence) {
+    if (this.cancelled || !sentence.trim()) return;
+    const avatar = faceMode === "avatar" && window.KRAvatar?.loaded;
+    // eyes: fetch audio now (prefetch); avatar: KRAvatar.say fetches its own lip-sync audio
+    const audio = avatar ? null : fetch("/voice/speak", { method: "POST", headers: { "Content-Type": "application/json" },
+                                                          body: JSON.stringify({ text: sentence }) }).then(r => r.arrayBuffer());
+    this.items.push({ sentence, audio, avatar });
+    this.pump();
+  }
+  end() { this.ended = true; this.pump(); }
+  cancel() { this.cancelled = true; this.items = []; try { this.src?.stop(); } catch {} window.KRAvatar?.stop?.(); }
+  async pump() {
+    if (this.playing || this.cancelled) return;
+    const it = this.items.shift();
+    if (!it) { if (this.ended && player === this.handle) replyFinished(); return; }
+    this.playing = true;
+    const begin = () => {
+      if (this.started) return;
+      this.started = true; speakStart = performance.now(); setState("speaking", ""); startBargeIn();
+    };
+    try {
+      if (it.avatar) await KRAvatar.say(it.sentence, begin);
+      else await this.playBuffer(await it.audio, begin);
+    } catch (e) { reportError("speech: " + (e && e.message)); }
+    this.playing = false;
+    this.pump();
+  }
+  async playBuffer(data, begin) {
+    outCtx ||= new (window.AudioContext || window.webkitAudioContext)();
+    if (outCtx.state === "suspended") await outCtx.resume();
+    const buf = await outCtx.decodeAudioData(data);
+    if (this.cancelled) return;
+    const src = outCtx.createBufferSource();
+    outAnalyser = outCtx.createAnalyser(); outAnalyser.fftSize = 512; outData = new Uint8Array(outAnalyser.fftSize);
+    src.buffer = buf; src.connect(outAnalyser); outAnalyser.connect(outCtx.destination);
+    this.src = src;
+    await new Promise(res => { src.onended = res; src.start(); begin(); });
+  }
+}
+
+async function streamReply(text) {
+  chatHistory.push({ role: "user", content: text });
+  const r = await fetch(BRAIN_URL, {
+    method: "POST", headers: { "Content-Type": "application/json", ...(BRAIN_KEY && { Authorization: "Bearer " + BRAIN_KEY }) },
+    body: JSON.stringify({ model: BRAIN_MODEL, messages: chatHistory, stream: true }),
+  });
+  if (!r.ok || !r.body) throw new Error("stream http " + r.status);
+  document.getElementById("brain").textContent = "ONLINE";
+  stopSpeaking();
+  const q = new SpeechQueue();
+  q.handle = { pause: () => q.cancel() };   // stopSpeaking() / barge-in / click stop the whole reply
+  player = q.handle;
+  const msg = addMsg("kr", ""), reader = r.body.getReader(), dec = new TextDecoder();
+  let buf = "", full = "", pending = "";
+  const flushSentences = (final) => {
+    // a sentence ends at . ! ? (or a newline) followed by space; keep tiny fragments together
+    let m;
+    while ((m = pending.match(/^([\s\S]{12,}?[.!?…])(\s+|$)/)) || (m = pending.match(/^([\s\S]+?)\n+/))) {
+      if (!final && !m[2] && m[0] === pending) break;          // might still be mid-number like "3."
+      q.push(m[1].replace(/[*_#`>]+/g, "").trim());
+      pending = pending.slice(m[0].length);
+    }
+    if (final && pending.trim()) { q.push(pending.replace(/[*_#`>]+/g, "").trim()); pending = ""; }
+  };
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    const lines = buf.split("\n"); buf = lines.pop();
+    for (const line of lines) {
+      if (!line.startsWith("data:")) continue;
+      const data = line.slice(5).trim();
+      if (!data || data === "[DONE]") continue;
+      let delta = "";
+      try { delta = JSON.parse(data).choices?.[0]?.delta?.content || ""; } catch {}
+      if (!delta) continue;
+      full += delta; pending += delta;
+      msg.lastChild.nodeType === 3 ? (msg.lastChild.textContent = full) : msg.append(full);
+      logEl.scrollTop = logEl.scrollHeight;
+      if (player === q.handle) flushSentences(false);
+    }
+  }
+  flushSentences(true);
+  q.end();
+  const reply = full.trim() || "I got an empty answer.";
+  if (!full.trim()) { msg.append(reply); q.push(reply); }
+  chatHistory.push({ role: "assistant", content: reply });
+  attachCards(msg, bubblesFor(reply));
+}
+
+// Voice commands for Hermes' Piper voice: "list voices", "change voice to ryan"
+async function voiceSkill(t) {
+  if (/\b(show|open|see|check)\b.*\b(briefings?|alerts?)\b/i.test(t) || /^\s*(my )?(briefings|alerts)\s*[.!?]*$/i.test(t)) {
+    await openAlerts();
+    const n = ALERTS ? ALERTS.items.length : 0;
+    return n ? `Here are your briefings. ${n} so far.` : `No briefings yet. Say brief me.`;
+  }
+  if (!hermesVoice) return null;
+  const s = t.toLowerCase().replace(/[.!?]+$/, "");
+  if (/\b(list|show|what)\b.*\bvoices\b/.test(s)) {
+    const j = await (await fetch("/voice/voices")).json();
+    j.voices.forEach(v => addMsg("kr", `voice: ${v.name} (${v.about})`));
+    return "Those are the voices I can use. Say change voice to, then a name.";
+  }
+  const m = s.match(/\b(?:change|switch|set)\b(?: your| the| my)? voice to (?:the )?([a-z_]+)/) || s.match(/\buse (?:the )?([a-z_]+) voice\b/);
+  if (m) {
+    setState("thinking", "Switching voice…");
+    const r = await fetch("/voice/set", { method: "POST", headers: { "Content-Type": "application/json" },
+                                          body: JSON.stringify({ voice: m[1] }) });
+    const j = await r.json();
+    if (!r.ok) return `I don't have a voice called ${m[1]}. Say list voices to hear the options.`;
+    document.getElementById("voice").textContent = "HERMES · PIPER";
+    return `Okay, this is my new voice, ${m[1]}. How do I sound?`;
+  }
+  return null;
+}
+
+// Small built-in skills so the page is useful before Hermes is wired in
+function localSkill(t) {
+  const s = t.toLowerCase();
+  if (/^(hi|hey|hello)( there)?( timmy)?[.!]*$/.test(s)) return "Hello. Timmy online and ready.";
+  if (/what('?s| is) the time|what time/.test(s)) return "It's " + new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) + ".";
+  if (/date|what day/.test(s)) return "Today is " + new Date().toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" }) + ".";
+  if (/who are you|your name/.test(s)) return "I'm Timmy, your personal assistant.";
+  if (/list (your )?voices/.test(s)) {
+    const names = [...new Set(speechSynthesis.getVoices().filter(v => v.lang.startsWith("en")).map(v => v.name))];
+    names.forEach(n => addMsg("kr", "voice: " + n));
+    return "I listed the English voices I can use. Put one in config.js as voice.";
+  }
+  let m = s.match(/^(?:search|google|look up)\s+(?:for\s+)?(.+)/);
+  if (m) { open("https://www.google.com/search?q=" + encodeURIComponent(m[1])); return "Searching for " + m[1] + "."; }
+  m = s.match(/^open\s+(youtube|gmail|github|maps|spotify)/);
+  if (m) {
+    const urls = { youtube: "https://youtube.com", gmail: "https://mail.google.com", github: "https://github.com",
+                   maps: "https://maps.google.com", spotify: "https://open.spotify.com" };
+    open(urls[m[1]]); return "Opening " + m[1] + ".";
+  }
+  return null;
+}
+
+// ---- HUD panels ----
+const t0 = Date.now();
+function tick() {
+  const d = new Date();
+  document.getElementById("time").textContent = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  document.getElementById("date").textContent = d.toLocaleDateString([], { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+  const s = Math.floor((Date.now() - t0) / 1000);
+  document.getElementById("uptime").textContent = s < 60 ? s + "s" : Math.floor(s / 60) + "m " + (s % 60) + "s";
+}
+setInterval(tick, 1000); tick();
+navigator.getBattery?.().then(b => {
+  const upd = () => document.getElementById("batt").textContent = Math.round(b.level * 100) + "%" + (b.charging ? " ⚡" : "");
+  upd(); b.addEventListener("levelchange", upd); b.addEventListener("chargingchange", upd);
+});
+// Daily briefing: show (and speak, once the page has been clicked) each new one the scheduled skill publishes.
+let userActed = false;
+addEventListener("pointerdown", () => userActed = true, { once: true });
+addEventListener("keydown", () => userActed = true, { once: true });
+// Only today's briefing is shown; each one once per browser.
+async function checkNews(kind) {
+  try {
+    const j = await (await fetch(`/${kind}/latest`)).json();
+    let seen = null; try { seen = localStorage.getItem("kr." + kind); } catch {}
+    if (!j.date || j.date === seen) return;
+    try { localStorage.setItem("kr." + kind, j.date); } catch {}
+    if (!j.date.startsWith(new Date().toLocaleDateString("en-CA"))) return;
+    if (userActed && state === "idle") say(j.text); else addMsg("kr", j.text);
+  } catch { /* no endpoint (plain static server) */ }
+}
+const checkAll = () => { checkNews("briefing"); typeof loadAlerts === "function" && loadAlerts(); };
+setInterval(checkAll, 60000); setTimeout(checkAll, 1500);
+
+document.getElementById("brain").textContent = BRAIN_URL ? "LINKING" : "OFFLINE";
+// Reload the recent chat from Timmy's persistent web session (kept by server/timmy_server.py), so a refresh loses nothing.
+async function loadHistory() {
+  try {
+    const j = await (await fetch("/chat/history")).json();
+    j.messages.slice(-20).forEach(m => addMsg(m.role === "user" ? "you" : "kr", m.content));
+    if (j.messages.length) { document.getElementById("brain").textContent = "ONLINE"; return; }
+  } catch { /* plain static server: no history */ }
+  addMsg("kr", `Timmy online. ${TAP_HINT}.`);
+}
+setTimeout(loadHistory, 300);
+if (state === "idle" && !recorder) setState("idle");   // show the right hint (tap vs click) right away
+document.getElementById("newchat").addEventListener("click", async () => {
+  if (convo) endConvo();
+  try { await fetch("/chat/new", { method: "POST" }); } catch {}
+  chatHistory.length = 1;
+  logEl.innerHTML = "";
+  addMsg("kr", "New conversation. I still remember what you've asked me to remember.");
+});
+</script>
+</body>
+</html>

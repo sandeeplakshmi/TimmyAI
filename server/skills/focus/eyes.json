@@ -1,0 +1,6 @@
+{
+  "focus": {"look": "focus", "ring": "countdown", "hue": 265},
+  "cheer": {"look": "cheer", "particles": "confetti", "secs": 5},
+  "break": {"look": "sleepy", "ring": "countdown", "hue": 200},
+  "ready": {"look": "happy", "hue": 140, "secs": 3}
+}

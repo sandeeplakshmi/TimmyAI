@@ -1,0 +1,7 @@
+{
+  "sun":   {"look": "squint", "particles": "sun", "hue": 48},
+  "cloud": {"look": "calm", "hue": 210},
+  "rain":  {"look": "droop", "particles": "rain", "hue": 210},
+  "storm": {"look": "droop", "particles": "rain", "hue": 260},
+  "snow":  {"look": "shiver", "particles": "snow", "hue": 195}
+}

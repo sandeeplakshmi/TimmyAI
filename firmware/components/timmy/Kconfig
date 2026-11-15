@@ -1,0 +1,85 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Modified by the Timmy contributors, 2026
+# SPDX-License-Identifier: Apache-2.0
+
+menu "Timmy"
+
+    choice TIMMY_BOARD
+        prompt "Board with the full UI"
+        default TIMMY_BOARD_WAVESHARE_S3_175C
+        help
+            The UI is the voice companion on boards with a screen: an
+            animated avatar, push-to-talk chat, settings, and battery
+            handling. It runs beside Home Link, which owns Wi-Fi, BLE
+            pairing, credentials and OTA. Pick the board it runs on, or none
+            for a Link without a display.
+
+        config TIMMY_BOARD_WAVESHARE_S3_175C
+            bool "Waveshare ESP32-S3-Touch-AMOLED-1.75C"
+            depends on IDF_TARGET_ESP32S3
+
+    endchoice
+
+    config TIMMY_ENABLED
+        bool
+        default y
+        select HOMEHUB_DAEMON_REQUESTS   # voice notes and chat over Link's session
+
+    # Always defined, unlike the target-dependent board options, so
+    # idf_component.yml rules can select each board's managed components.
+    config TIMMY_BOARD_ID
+        string
+        default "waveshare_s3_175c" if TIMMY_BOARD_WAVESHARE_S3_175C
+        default "none"
+
+    config TIMMY_DEFAULT_VOLUME
+        int "Speaker volume until one is chosen in settings (percent)"
+        range 0 100
+        default 70
+
+    choice TIMMY_UI_LANGUAGE
+        prompt "Language of the screen's own text"
+        depends on TIMMY_ENABLED
+        default TIMMY_UI_LANG_EN
+        help
+            The state label ("READY") and the captions the firmware shows
+            itself ("CAN'T REACH TIMMY"). Timmy's replies are in whatever
+            language you speak to it, and the serial console stays in
+            English for the tools that read it. The button menu and the
+            pairing card are translated; the touch boards' settings pages
+            aren't yet.
+
+        config TIMMY_UI_LANG_EN
+            bool "English"
+
+    endchoice
+
+    config TIMMY_STATIC_BUFFERS_IN_PSRAM
+        bool "Keep the avatar's and audio's static buffers in PSRAM"
+        depends on TIMMY_ENABLED && SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY
+        default n
+        help
+            Places the zero-initialized statics of the avatar renderer
+            (timmy_pixel.c: its frame, mask and lookup tables) and the audio
+            path (timmy_audio.c: the I2S staging and chirp buffers), about
+            17 KB, in PSRAM instead of internal RAM (linker.lf). Only the
+            CPU touches them: the avatar is scaled into LVGL's draw buffer,
+            and the I2S driver copies to and from its own DMA buffers. Turn
+            it on where internal RAM is short, as the SenseCAP Watcher does
+            to pay for the CPU's light-sleep retention memory, which it
+            takes at boot and keeps.
+
+endmenu

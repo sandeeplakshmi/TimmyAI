@@ -1,0 +1,12 @@
+name: focus
+description: Focus timer. A countdown ring circles the eyes; when time's up Timmy cheers, then the eyes go sleepy for a short break.
+examples:
+  - "focus 25 minutes"
+  - "start a focus session"
+  - "how much focus time is left"
+  - "stop focus"
+patterns:
+  - '\b(?:stop|cancel|end|quit) (?:the |my )?focus\b'
+  - '\bhow (?:much|long)\b.*\bfocus\b|\bfocus (?:time )?left\b'
+  - '\b(?:start (?:a )?)?focus(?: session| mode| time)?(?: for)?(?:\s+(?P<dur>[\w. -]*(?:minutes?|mins?|hours?|m|h)))?$'
+tool: 'Pass the phrase, e.g. "focus 25 minutes", "stop focus".'

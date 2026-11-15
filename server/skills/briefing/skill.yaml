@@ -1,0 +1,9 @@
+name: briefing
+description: Morning briefing on the board, at a set time on chosen days or on "good morning". Weather, today's reminders and an optional local calendar file; reuses the day's web briefing when one exists.
+examples:
+  - "good morning"
+  - "brief me"
+  - "what's my day look like"
+patterns:
+  - '^good morning\b|\bmorning briefing\b|\bbrief me\b|\bwhat(?:''s| is) my day\b'
+tool: 'Pass the phrase, e.g. "good morning".'

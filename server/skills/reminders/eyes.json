@@ -1,0 +1,4 @@
+{
+  "set":   {"look": "happy", "hue": 140},
+  "nudge": {"look": "glow", "hue": 40, "secs": 3}
+}

@@ -1,0 +1,11 @@
+name: notes
+description: Quick notes. Adds a timestamped line to a local Markdown file, and reads the last few back.
+examples:
+  - "note: buy filters"
+  - "add a note call the plumber"
+  - "read my notes"
+patterns:
+  - '^(?:take a |make a |add a |write a )?note(?: down| that)?[:,]?\s+(?P<note>.+)'
+  - '^(?:remember|jot down) that\s+(?P<note>.+)'
+  - '\b(?:read|what are) (?:me )?my (?:last )?notes\b'
+tool: 'Pass the whole phrase, e.g. "note: buy filters" or "read my notes".'

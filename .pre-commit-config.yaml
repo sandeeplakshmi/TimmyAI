@@ -1,0 +1,15 @@
+# SPDX-License-Identifier: Apache-2.0
+# The same checks as scripts/pre-commit, for the pre-commit framework (https://pre-commit.com).
+repos:
+  - repo: local
+    hooks:
+      - id: timmy-private
+        name: Timmy private-data and branding check
+        entry: scripts/check-private.sh --staged
+        language: script
+        pass_filenames: false
+      - id: timmy-licenses
+        name: Timmy license check
+        entry: scripts/check-licenses.sh
+        language: script
+        pass_filenames: false

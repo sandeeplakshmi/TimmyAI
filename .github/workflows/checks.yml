@@ -1,0 +1,24 @@
+# SPDX-License-Identifier: Apache-2.0
+# Secret scan and license checks on every push and pull request.
+name: checks
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: gitleaks (full history)
+        run: |
+          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz | tar -xz gitleaks
+          sudo mv gitleaks /usr/local/bin/
+          gitleaks git --no-banner --redact -v .
+      - name: license checks
+        run: scripts/check-licenses.sh
+      - name: branding and private-data checks
+        run: scripts/check-private.sh
+      - name: server syntax
+        run: python3 -m py_compile server/*.py server/skills/*/*.py server/hermes-skills/*/scripts/*.py

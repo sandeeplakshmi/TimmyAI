@@ -1,0 +1,12 @@
+name: weather
+description: Weather now and today from Open-Meteo (free, no key), with matching eyes. Set the city by voice.
+examples:
+  - "what's the weather"
+  - "will it rain today"
+  - "weather in Chicago"
+  - "set my city to Denver"
+patterns:
+  - '\b(?:set|change) my (?:city|location) to\s+(?P<city>.+)'
+  - '\bweather\b(?: (?:like )?(?:in|for)\s+(?P<place>[a-z .,-]+?))?(?: today| now| tomorrow)?$'
+  - '\b(?:forecast|will it (?:rain|snow)|is it (?:going to )?(?:rain|snow|cold|hot|warm|sunny)(?:ing)?)\b'
+tool: 'Pass the phrase, e.g. "weather", "weather in Paris" or "set my city to Denver".'

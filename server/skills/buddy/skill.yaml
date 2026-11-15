@@ -1,0 +1,12 @@
+name: buddy
+description: Desk-buddy habits. Sleeps in quiet hours (picking the board up wakes it), pouts after being ignored a long time, and gives optional water and posture nudges in active hours.
+examples:
+  - "good night"
+  - "wake up"
+  - "turn on water reminders"
+  - "turn off posture reminders"
+patterns:
+  - '^good ?night\b|\bgo to sleep\b'
+  - '^wake up\b|\bi(?:''| a)m (?:up|awake|back)\b'
+  - '\bturn (?P<onoff>on|off) (?:the )?(?P<kind>water|posture|stretch) (?:reminders?|nudges?)\b'
+tool: 'Pass the phrase, e.g. "good night" or "turn on water reminders".'

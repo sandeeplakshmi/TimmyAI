@@ -1,0 +1,30 @@
+#!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 the Timmy contributors
+#
+# Git pre-commit hook (installed by scripts/install-hooks.sh). Blocks the commit when:
+#   gitleaks finds a secret, a private denylist string appears, upstream branding or a private
+#   network word appears outside the attribution places, a new source file has no license header,
+#   or the license checks fail.
+set -uo pipefail
+root=$(git rev-parse --show-toplevel)
+cd "$root"
+fail=0
+scripts/check-private.sh --staged || fail=1
+# New source files need a license header.
+for f in $(git diff --cached --name-only --diff-filter=A); do
+    case "$f" in web/vendor/*|firmware/components/minimp3/*) continue;; esac
+    case "$f" in
+        *.c|*.h|*.cpp|*.hpp|*.S|*.py|*.sh|*.js|*.mjs|*.html|*.cmake|*.lf|*CMakeLists.txt|*Kconfig*)
+            top=$(git show ":$f" 2>/dev/null | sed -n 1,40p)
+            printf '%s' "$top" | grep -qE "SPDX-License-Identifier: Apache-2.0|Licensed under the Apache License, Version 2.0" \
+                || { echo "NEW FILE WITHOUT LICENSE HEADER: $f (add: SPDX-License-Identifier: Apache-2.0)"; fail=1; } ;;
+    esac
+done
+scripts/check-licenses.sh >/tmp/timmy-lic.$$ 2>&1 || { cat /tmp/timmy-lic.$$; fail=1; }
+rm -f /tmp/timmy-lic.$$
+if [ $fail != 0 ]; then
+    echo
+    echo "Commit blocked by Timmy's checks (see above). Nothing was committed."
+    exit 1
+fi

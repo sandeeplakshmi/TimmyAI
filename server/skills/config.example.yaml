@@ -1,0 +1,35 @@
+# Timmy skills: every setting, with its default. Copy the parts you want to change into your local
+# config, <state>/config.yaml (default ~/.timmy/skill-state/config.yaml, outside the repo), and edit there.
+# Voice commands like "set my city to Denver" write that file for you.
+
+general:
+  name: ""                 # how Timmy addresses you, e.g. "Sam"; empty: no name
+
+weather:
+  city: ""                 # "set my city to X" sets it (looked up with Open-Meteo's free geocoder)
+  latitude: null
+  longitude: null
+  units: fahrenheit        # or celsius
+
+focus:
+  minutes: 25              # "focus" with no length
+  break_minutes: 5
+
+reminders:
+  late_quiet_minutes: 30   # a reminder more than this late (board was off) is shown, not spoken
+
+notes:
+  file: ""                 # empty: <state>/notes.md
+  read_last: 3             # "read my notes" reads this many
+
+briefing:
+  time: "07:30"            # board briefing; reuses the web page's briefing of the day when there is one
+  days: [mon, tue, wed, thu, fri]
+  calendar_ics: ""         # optional path to a local .ics file for today's events
+  reuse_dir: ""            # optional folder of <YYYY-MM-DD>.md briefings written by something else; today's is read out instead
+
+buddy:
+  quiet_hours: "22:00-07:00"   # eyes sleep, no nudges
+  pout_after_hours: 4          # ignored this long while awake: a little pout when you come back
+  water_minutes: 0             # 0: off; e.g. 75 for a water nudge every 75 minutes in active hours
+  posture_minutes: 0           # 0: off; e.g. 60

@@ -1,0 +1,17 @@
+name: reminders
+description: Reminders and timers. At the time the eyes glow, then Timmy says it. Kept across restarts; if the board is off, it's told when it's back (quietly if very late).
+examples:
+  - "remind me at 3 to call mom"
+  - "remind me to stretch in 20 minutes"
+  - "remind me tomorrow at 9 am to pay rent"
+  - "timer 10 minutes"
+  - "what are my reminders"
+  - "cancel my timer"
+patterns:
+  - '\bremind me (?P<when>(?:in|at|tomorrow|tonight)\b.*?) to (?P<what>.+)'
+  - '\bremind me to (?P<what>.+?) (?P<when>(?:in|at|tomorrow)\b.+)'
+  - '\b(?:set (?:a |an )?)?timer (?:for )?(?P<dur>.+)'
+  - '\b(?P<dur>[\w.-]+ (?:seconds?|minutes?|hours?)) timer\b'
+  - '\b(?:what are|list|read) my (?:reminders|timers)\b|\bany reminders\b'
+  - '\b(?:cancel|stop|delete|clear) (?:my |the |all )?(?P<cancel>reminders?|timers?)\b'
+tool: 'Pass the phrase, e.g. "remind me at 3 to call mom", "timer 10 minutes", "what are my reminders".'

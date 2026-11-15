@@ -1,0 +1,47 @@
+# Personal data never lives in this repository: it is in ~/.timmy (TIMMY_HOME).
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.keystore
+keys/
+data/
+memory/
+topics/
+finance/
+alerts/
+briefings/
+*.db
+*.sqlite
+*.sqlite3
+*.log
+logs/
+
+# Firmware build output and fetched components
+firmware/build*/
+build*/
+firmware/managed_components/
+managed_components/
+firmware/dependencies.lock
+dependencies.lock
+firmware/sdkconfig
+firmware/sdkconfig.old
+sdkconfig
+sdkconfig.old
+!firmware/sdkconfig.defaults
+
+# Web: local config and optional avatar models
+web/config.js
+web/vendor/avatars/*.glb
+
+# Python / OS / editors
+__pycache__/
+*.pyc
+.venv/
+.DS_Store
+.idea/
+.vscode/
+.cache/
+dist/
