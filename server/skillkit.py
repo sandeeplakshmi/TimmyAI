@@ -30,7 +30,7 @@ from pathlib import Path
 import yaml
 
 ROOT = Path(__file__).resolve().parent / "skills"
-STATE = Path(os.environ.get("TIMMY_STATE", Path(os.environ.get("TIMMY_HOME", Path.home() / ".timmy")) / "skill-state"))
+STATE = Path(os.environ.get("TIMMY_STATE", Path(os.environ.get("TIMMY_HOME") or Path.home() / ".timmy") / "skill-state"))
 LATE_S = 30 * 60          # a spoken message more than this late is shown quietly instead
 DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 

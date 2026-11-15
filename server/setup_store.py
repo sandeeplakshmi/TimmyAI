@@ -11,7 +11,7 @@ import re
 import secrets
 from pathlib import Path
 
-TIMMY_HOME = Path(os.environ.get("TIMMY_HOME", Path.home() / ".timmy"))
+TIMMY_HOME = Path(os.environ.get("TIMMY_HOME") or Path.home() / ".timmy")
 HERMES_HOME = Path(os.environ.get("HERMES_HOME", Path.home() / ".hermes"))
 KEY_RE = re.compile(r"^sk-ant-[A-Za-z0-9_\-]{20,200}$")
 SAFE_VALUE = re.compile(r"^[A-Za-z0-9 _.:/@+\-]{0,200}$")

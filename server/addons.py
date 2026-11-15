@@ -18,7 +18,7 @@ import sys
 import types
 from pathlib import Path
 
-TIMMY_HOME = Path(os.environ.get("TIMMY_HOME", Path.home() / ".timmy"))
+TIMMY_HOME = Path(os.environ.get("TIMMY_HOME") or Path.home() / ".timmy")
 loaded = []
 
 

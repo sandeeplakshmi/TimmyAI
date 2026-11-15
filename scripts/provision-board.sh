@@ -29,7 +29,7 @@ def opt(name, default=None):
         return args[i + 1] if i + 1 < len(args) else sys.exit(2)
     return default
 port, host, device = opt("--port"), opt("--host"), opt("--device", "timmy-desk")
-home = Path(os.environ.get("TIMMY_HOME", Path.home() / ".timmy"))
+home = Path(os.environ.get("TIMMY_HOME") or Path.home() / ".timmy")
 keys_file = home / "keys" / "gadget-keys.json"
 
 if not port:

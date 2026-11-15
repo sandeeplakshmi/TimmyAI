@@ -53,7 +53,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import skillkit  # noqa: E402  (ui/skillkit.py: the skills, shared with the web server)
 
 HERMES_HOME = Path(os.environ.get("HERMES_HOME", Path.home() / ".hermes"))
-TIMMY_HOME = Path(os.environ.get("TIMMY_HOME", Path.home() / ".timmy"))
+TIMMY_HOME = Path(os.environ.get("TIMMY_HOME") or Path.home() / ".timmy")
 KEYS_FILE = TIMMY_HOME / "keys" / "gadget-keys.json"
 LOG_FILE = HERMES_HOME / "logs" / "timmy-gadget.log"
 PORT = int(os.environ.get("TIMMY_GADGET_PORT", "8790"))

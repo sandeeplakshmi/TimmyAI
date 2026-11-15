@@ -11,7 +11,7 @@ import json, os, shutil, subprocess, sys, time, urllib.request
 from pathlib import Path
 
 root = Path(sys.argv[1]); as_json = "--json" in sys.argv[2:]
-home = Path(os.environ.get("TIMMY_HOME", Path.home() / ".timmy"))
+home = Path(os.environ.get("TIMMY_HOME") or Path.home() / ".timmy")
 hermes_home = Path(os.environ.get("HERMES_HOME", Path.home() / ".hermes"))
 port = int(os.environ.get("TIMMY_PORT", "8000"))
 gateway = os.environ.get("TIMMY_GATEWAY", "http://127.0.0.1:8642").rstrip("/")

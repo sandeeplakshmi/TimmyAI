@@ -58,7 +58,7 @@ HERMES_SRC = HERMES_HOME / "hermes-agent"
 REPO_DIR = HERE.parent
 WEB_DIR = REPO_DIR / "web"
 # Personal data (sessions, briefings, allowed hosts, device keys) lives outside the repo.
-TIMMY_HOME = Path(os.environ.get("TIMMY_HOME", Path.home() / ".timmy"))
+TIMMY_HOME = Path(os.environ.get("TIMMY_HOME") or Path.home() / ".timmy")
 PORT = int(os.environ.get("TIMMY_PORT", "8000"))
 GATEWAY = os.environ.get("TIMMY_GATEWAY", "http://127.0.0.1:8642")
 ALLOWED_HOSTS = {f"localhost:{PORT}", f"127.0.0.1:{PORT}"}

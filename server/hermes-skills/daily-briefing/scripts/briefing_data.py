@@ -18,8 +18,17 @@ import urllib.request
 from datetime import date
 from pathlib import Path
 
-TIMMY_HOME = Path(os.environ.get("TIMMY_HOME", Path.home() / ".timmy"))
+TIMMY_HOME = Path(os.environ.get("TIMMY_HOME") or Path.home() / ".timmy")
 TOPICS = TIMMY_HOME / "topics"
+# Settings from $TIMMY_HOME/.env when they aren't in the environment (cron jobs don't load it).
+try:
+    for _line in (TIMMY_HOME / ".env").read_text().splitlines():
+        if "=" in _line and not _line.lstrip().startswith("#"):
+            _k, _v = _line.split("=", 1)
+            if _v.strip() and not os.environ.get(_k.strip()):
+                os.environ[_k.strip()] = _v.strip().strip('"').strip("'")
+except OSError:
+    pass
 # Where the weather is for: set TIMMY_LAT / TIMMY_LON / TIMMY_PLACE (e.g. in $TIMMY_HOME/.env).
 LAT = os.environ.get("TIMMY_LAT", "")
 LON = os.environ.get("TIMMY_LON", "")
