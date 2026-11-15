@@ -1,5 +1,7 @@
 # Timmy (TimmyAI)
 
+<p align="center"><img src="docs/media/eyes-hero.gif" width="240" alt="Timmy's eyes cycling through idle, listening, thinking, speaking and happy moods"></p>
+
 A personal voice assistant that runs on your own Mac, with a little round desk
 gadget to talk to it. Hold the button, ask, and Timmy answers out loud with
 animated neon eyes. The same assistant is on a web page (with a phone-friendly
@@ -16,6 +18,39 @@ home-screen app) on your own network.
 
 Your personal data never lives in this repository: it is in `~/.timmy`
 (`TIMMY_HOME`). See [docs/CUSTOMIZING.md](docs/CUSTOMIZING.md).
+
+## Screenshots
+
+The web page (made-up demo data):
+
+<p align="center"><img src="docs/media/web-chat.png" width="820" alt="Timmy's web page: a short conversation next to the animated eyes"></p>
+
+| Menu | Alerts & briefings | Voice & speed |
+|------|--------------------|---------------|
+| <img src="docs/media/web-menu.png" width="280" alt="The menu"> | <img src="docs/media/web-alerts.png" width="280" alt="The alerts and briefings panel"> | <img src="docs/media/web-voice.png" width="280" alt="Voice and speed settings"> |
+
+| On a phone | First-run setup |
+|------------|-----------------|
+| <img src="docs/media/web-phone.png" width="220" alt="Timmy on a phone"> | <img src="docs/media/setup-page.png" width="420" alt="The setup page: Claude key or local model, name, voice"> |
+
+### The desk gadget
+
+<!-- BOARD VIDEO: add a real photo/video of the board here (shot list: docs/media/README.md), e.g.
+<p align="center"><img src="docs/media/board-hero.gif" width="360" alt="Timmy on the Waveshare board"></p>
+-->
+*A photo and video of the real board are coming; see the shot list in [docs/media/README.md](docs/media/README.md).*
+
+### Moods
+
+Rendered from the firmware's own drawing code, so this is exactly what the round AMOLED shows.
+
+| Idle | Listening | Thinking | Speaking |
+|------|-----------|----------|----------|
+| <img src="docs/media/eyes-idle.gif" width="160" alt="Idle: breathing, blinking"> | <img src="docs/media/eyes-listening.gif" width="160" alt="Listening"> | <img src="docs/media/eyes-thinking.gif" width="160" alt="Thinking"> | <img src="docs/media/eyes-speaking.gif" width="160" alt="Speaking"> |
+
+| Happy (petted) | Sleepy | Focus timer |
+|----------------|--------|-------------|
+| <img src="docs/media/eyes-happy.gif" width="160" alt="Happy, being petted"> | <img src="docs/media/eyes-sleepy.gif" width="160" alt="Sleepy"> | <img src="docs/media/eyes-ring.png" width="160" alt="The focus timer's countdown ring"> |
 
 ## Install
 

@@ -52,7 +52,14 @@ def status():
             "api_server_ready": h.get("API_SERVER_ENABLED", "").lower() == "true" and bool(h.get("API_SERVER_KEY")),
             "local_model": t.get("TIMMY_LOCAL_MODEL", ""),
             "assistant_name": t.get("TIMMY_USER_NAME", ""),
-            "timmy_home": str(TIMMY_HOME)}
+            "timmy_home": _short(TIMMY_HOME)}
+
+
+def _short(path):
+    """The path with the home folder as ~ (so screenshots of the page don't show the user name)."""
+    home = str(Path.home())
+    p = str(path)
+    return "~" + p[len(home):] if p == home or p.startswith(home + "/") else p
 
 
 def save(body):
