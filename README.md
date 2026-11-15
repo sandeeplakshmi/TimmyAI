@@ -35,10 +35,7 @@ The web page :
 
 ### The desk gadget
 
-<!-- BOARD VIDEO: add a real photo/video of the board here (shot list: docs/media/README.md), e.g.
-<p align="center"><img src="docs/media/board-hero.gif" width="360" alt="Timmy on the Waveshare board"></p>
--->
-*A photo and video of the real board are coming; see the shot list in [docs/media/README.md](docs/media/README.md).*
+<p align="center"><img src="docs/media/board.jpg" width="360" alt="Timmy on the Waveshare ESP32-S3 1.75C round board, showing the neon eyes and READY"></p>
 
 ### Moods
 
@@ -83,6 +80,16 @@ The assistant never handles your API key: the install ends on the local setup
 page, where you paste it yourself.
 
 ## The desk gadget
+
+**What to buy:** the Waveshare **ESP32-S3-Touch-AMOLED-1.75C** (about $42), a
+1.75" round AMOLED touch board in an aluminum case with a built-in speaker,
+microphones and an optional battery. Make sure it's the **1.75C** (with case);
+the plain 1.75 board is different.
+
+- [Waveshare store](https://www.waveshare.com/esp32-s3-touch-amoled-1.75c.htm)
+- [Waveshare wiki and docs](https://docs.waveshare.com/ESP32-S3-Touch-AMOLED-1.75C)
+
+You also need a USB-C data cable (charge-only cables can't flash it).
 
 Build and flash: [firmware/README.md](firmware/README.md), or just
 `./install.sh flash` (it finds the board on USB, flashes, then waits for it to
