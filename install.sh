@@ -96,7 +96,7 @@ else
 fi
 
 step=2; log start "Hermes Agent (the brain, speech-to-text and text-to-speech)"
-if command -v hermes >/dev/null 2>&1; then log ok "$(hermes --version 2>/dev/null | head -1)"
+if command -v hermes >/dev/null 2>&1; then log ok "$(hermes --version 2>&1 | head -1)"
 else
     if confirm "Install Hermes Agent from $HERMES_INSTALL_URL?"; then
         if [ $DRY = 1 ]; then log dry "curl -fsSL $HERMES_INSTALL_URL | bash"
