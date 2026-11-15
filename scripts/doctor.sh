@@ -14,6 +14,7 @@ root = Path(sys.argv[1]); as_json = "--json" in sys.argv[2:]
 home = Path(os.environ.get("TIMMY_HOME", Path.home() / ".timmy"))
 hermes_home = Path(os.environ.get("HERMES_HOME", Path.home() / ".hermes"))
 port = int(os.environ.get("TIMMY_PORT", "8000"))
+gateway = os.environ.get("TIMMY_GATEWAY", "http://127.0.0.1:8642").rstrip("/")
 gport = int(os.environ.get("TIMMY_GADGET_PORT", "8790"))
 checks = []
 
@@ -53,7 +54,10 @@ add("Homebrew", shutil.which("brew"), sh("brew", "--version").split("\n")[0] or 
     'install it: /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"')
 add("Python 3.10+", sys.version_info >= (3, 10), sys.version.split()[0], "brew install python@3.12")
 hermes = shutil.which("hermes") or (str(Path.home() / ".local/bin/hermes") if (Path.home() / ".local/bin/hermes").exists() else None)
-add("Hermes Agent", hermes, sh(hermes, "--version").split("\n")[0] if hermes else "missing", "./install.sh --yes (step 2)")
+hv = subprocess.run([hermes, "--version"], capture_output=True, text=True, timeout=30) if hermes else None
+add("Hermes Agent", hv is not None and hv.returncode == 0,
+    ((hv.stdout or hv.stderr).strip().split("\n")[0] if hv else "missing"),
+    "./install.sh --yes (step 2); if it's installed but broken: hermes pm repair")
 add("Timmy folder", home.is_dir(), str(home), "./install.sh --yes (step 3)")
 if home.is_dir():
     mode = oct(home.stat().st_mode & 0o777)
@@ -66,19 +70,19 @@ add("Brain configured", h.get("ANTHROPIC_API_KEY") or env_keys(home / ".env").ge
     f"the human opens http://localhost:{port}/setup.html and enters it (agents never handle the key)")
 add("Hermes API server enabled", h.get("API_SERVER_ENABLED") and h.get("API_SERVER_KEY"), "API_SERVER_ENABLED and API_SERVER_KEY",
     f"save once on http://localhost:{port}/setup.html, then: hermes gateway restart")
-code, _ = http("http://127.0.0.1:8642/health")
-add("Hermes gateway running", code == 200, "http://127.0.0.1:8642/health" + (" OK" if code == 200 else " not answering"),
-    "hermes gateway start (or ./install.sh --yes for the login service)")
+code, _ = http(gateway + "/health")
+add("Hermes gateway running", code == 200, gateway + "/health" + (" OK" if code == 200 else " not answering"),
+    "starts a service, so ask the human first: hermes gateway start (or ./install.sh --yes for the login service)")
 code, body = http(f"http://localhost:{port}/setup/status")
 add("Timmy web page", code == 200, f"http://localhost:{port}" + (" OK" if code == 200 else " not answering"),
-    "./start-timmy.sh, or ./install.sh --yes for the login service; logs: ~/.hermes/logs/timmy-web.out")
+    "starts a service, so ask the human first: ./start-timmy.sh, or ./install.sh --yes for the login service; logs: ~/.hermes/logs/timmy-web.out")
 code, body = http(f"http://localhost:{port}/voice/status")
 try:
     vs = json.loads(body) if code == 200 else {}
 except ValueError:
     vs = {}
 add("Voice (speech in and out)", vs.get("ok"), f"stt={vs.get('stt')} tts={vs.get('tts')} voice={vs.get('voice')}" if vs else "unknown (web page down)",
-    "./install.sh --yes (step 4); check Hermes' voice settings", required=False)
+    "needs the web page running; if the voice model is missing, re-run ./install.sh --yes once Hermes works (step 4 downloads it with Hermes' Python)", required=False)
 hooks = root / ".git/hooks/pre-commit"
 add("Commit checks installed", hooks.exists(), str(hooks), "scripts/install-hooks.sh", required=False)
 add("gitleaks", shutil.which("gitleaks"), shutil.which("gitleaks") or "missing", "brew install gitleaks", required=False)
@@ -89,7 +93,7 @@ add("ESP-IDF (firmware builds only)", idf, idf or "not installed", "./install.sh
 usb = sorted(str(p) for p in Path("/dev").glob("cu.usbmodem*"))
 add("Board on USB", usb, ", ".join(usb) or "not plugged in", "plug it in with a USB-C data cable (only needed to flash)", required=False)
 keys = home / "keys" / "gadget-keys.json"
-add("Gadget device key", keys.exists(), str(keys), "python3 server/gadget_server.py --new-key timmy-desk", required=False)
+add("Gadget device key", keys.exists(), str(keys), "with the board on USB: scripts/provision-board.sh (makes a key and sends it to the board without showing it)", required=False)
 try:
     st = json.loads((home / "gadget-status.json").read_text())
 except (OSError, ValueError):

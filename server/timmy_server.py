@@ -23,9 +23,10 @@ voice as the terminal:
                              config (length_scale > 1 speaks slower; terminal and page both use it)
   GET  /voice/sample?voice=ryan&length_scale=1.2   a short spoken sample (wav) to audition a voice
   GET  /briefing/latest      newest daily briefing {"date": ..., "text": ...} (written by the daily-briefing skill)
+  GET  /alerts/latest        newest alert a skill wrote to $TIMMY_HOME/alerts
   POST /wake/feed?s=<id>     16 kHz mono int16 PCM chunk -> {"detected": bool, "text": request after the
                              wake phrase}; sherpa keyword spotter + local Whisper check of short utterances
-  GET  /alerts               the ALERTS panel: a feed of recent daily briefings
+  GET  /alerts               the ALERTS panel: alerts, recent briefings, and add-on watches/listings
   GET  /cards                skills (hermes-skills/*/SKILL.md) as small cards
                              with match keywords, so the page can show bubbles when Timmy talks about them
   (also starts gadget_server.py: the desk gadget's WebSocket on 0.0.0.0:8790, only if a device key exists)
@@ -196,10 +197,23 @@ SKILL_ALIASES = {   # extra words that mean a skill
 }
 
 
+# Add-ons can add cards (functions returning a list of card dicts) and alert-panel data (functions
+# returning {"watches": [...], "items": [...], "listings": [...]}); see server/addons.py.
+CARD_PROVIDERS = []
+ALERT_PROVIDERS = []
+
+
 def cards():
-    """The brain's skills (hermes-skills/*/SKILL.md) as small cards with match keywords."""
+    """The brain's skills (hermes-skills/*/SKILL.md, plus $TIMMY_HOME/hermes-skills) as small cards with
+    match keywords, then any add-on cards."""
     out = []
-    for md in sorted((REPO_DIR / "server" / "hermes-skills").glob("*/SKILL.md")):
+    for provider in CARD_PROVIDERS:
+        try:
+            out += provider() or []
+        except Exception as exc:
+            print(f"card provider failed: {exc!r}", file=sys.stderr, flush=True)
+    for md in sorted(list((REPO_DIR / "server" / "hermes-skills").glob("*/SKILL.md"))
+                     + list((TIMMY_HOME / "hermes-skills").glob("*/SKILL.md"))):
         head = md.read_text().split("---")[1] if md.read_text().startswith("---") else ""
         name = re.search(r"^name:\s*(.+)$", head, re.M)
         desc = re.search(r'^description:\s*"?(.*?)"?$', head, re.M)
@@ -230,8 +244,21 @@ def skill_lines(name):
 
 
 def alerts_feed():
-    """What the ALERTS panel shows: the last two weeks of daily briefings (read from their files)."""
-    items = []
+    """What the ALERTS panel shows: alerts skills wrote ($TIMMY_HOME/alerts/*.md), the last two weeks of daily
+    briefings, and whatever add-ons provide (watches, items, listings)."""
+    items, watches, listings = [], [], []
+    for provider in ALERT_PROVIDERS:
+        try:
+            extra = provider() or {}
+            watches += extra.get("watches", []); items += extra.get("items", []); listings += extra.get("listings", [])
+        except Exception as exc:
+            print(f"alert provider failed: {exc!r}", file=sys.stderr, flush=True)
+    for f in sorted((TIMMY_HOME / "alerts").glob("*.md"))[-50:]:
+        lines = f.read_text().strip().splitlines()
+        d = re.sub(r"\D", "", f.stem)
+        stamp = f"{d[0:4]}-{d[4:6]}-{d[6:8]} {d[8:10]}:{d[10:12]}" if len(d) >= 12 else f.stem
+        items.append({"kind": "alert", "source": "Alert", "time": stamp, "title": (lines or [""])[0][:140],
+                      "text": "\n".join(lines[1:]).strip()[:3000]})
     for f in sorted((TIMMY_HOME / "briefings").glob("*.md"))[-14:]:
         text = f.read_text().strip()
         sents = re.split(r"(?<=[.!?])\s+", text)
@@ -244,7 +271,7 @@ def alerts_feed():
                       "time": time.strftime("%Y-%m-%d %H:%M", time.localtime(f.stat().st_mtime)),
                       "title": first[:140], "text": text[:3000]})
     items.sort(key=lambda i: i["time"], reverse=True)
-    return {"watches": [], "items": items[:50], "listings": []}
+    return {"watches": watches, "items": items[:50], "listings": listings[:8]}
 
 
 class WakeSession:
@@ -523,8 +550,8 @@ class Handler(SimpleHTTPRequestHandler):
                                                for k, (v, d) in timmy_voice.ORPHEUS.items()] +
                                               [{"name": k, "about": d, "quality": q, "engine": "piper"}
                                                for k, (_, d, q) in timmy_voice.VOICES.items()]})
-        if self.path == "/briefing/latest":
-            folder = "briefings"
+        if self.path in ("/briefing/latest", "/alerts/latest"):
+            folder = "briefings" if self.path.startswith("/briefing") else "alerts"
             files = sorted((TIMMY_HOME / folder).glob("*.md"))
             if not files:
                 return self._send(200, {"date": None, "text": ""})

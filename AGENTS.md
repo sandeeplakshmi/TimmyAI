@@ -10,7 +10,8 @@ Personal data lives outside the repo in `~/.timmy` (`TIMMY_HOME`).
 1. `./install.sh --yes` installs prerequisites, creates `~/.timmy` from
    `templates/timmy-home` if missing (never touches an existing one), sets up
    the login service and opens the setup page. Add `--json` for one JSON object
-   per step (`{"step", "state", "message"}`), `--dry-run` to preview.
+   per step (`{"step", "state", "message"}`), `--dry-run` to preview,
+   `--no-services` to skip the login service, `--no-open` to not open the browser.
    Exit codes: 10 NOT_MACOS, 11 HOMEBREW_MISSING, 12 PYTHON_FAILED,
    13 HERMES_FAILED, 14 TIMMY_HOME_FAILED, 15 VOICE_FAILED, 16 SERVICES_FAILED,
    17 WEB_NOT_UP, 18 ESP_IDF_FAILED.
@@ -20,7 +21,8 @@ Personal data lives outside the repo in `~/.timmy` (`TIMMY_HOME`).
 3. The human enters the Claude API key (or picks a local model) on
    http://localhost:8000/setup.html. **Never ask for, read, paste, store or
    print API keys or other secrets.** Non-secret options can be set with env
-   vars (`TIMMY_HOME`, `TIMMY_PORT`, `TIMMY_VOICE`).
+   vars (`TIMMY_HOME`, `TIMMY_PORT`, `TIMMY_GADGET_PORT`, `TIMMY_GATEWAY`,
+   `TIMMY_VOICE`); doctor honours the same ones.
 
 ## Verify
 
@@ -31,6 +33,9 @@ Personal data lives outside the repo in `~/.timmy` (`TIMMY_HOME`).
 
 ## Firmware and the board
 
+- Flashing needs ESP-IDF v6.0.3 (`./install.sh --with-firmware-tools`, which
+  installs brew packages and `~/esp`: ask the human first), or a prebuilt image
+  (`--image DIR`).
 - **Ask the human before flashing.** Then run `./install.sh flash --yes --json`
   (it emits `waiting_for_board`, `board_found`, `building`, `flashing`,
   `flashed`, `waiting_for_wifi`, `connected`, `error`).
@@ -43,6 +48,12 @@ Personal data lives outside the repo in `~/.timmy` (`TIMMY_HOME`).
   board, 2.4 GHz, same network as the Mac). Exit 25 NOT_CONNECTED means the
   board didn't reach the server: same Wi-Fi, server address and key set over
   USB serial (`firmware/README.md`), macOS firewall prompt for Python.
+- Flash exit codes: 20 BOARD_NOT_FOUND, 21 MULTIPLE_BOARDS, 22 PORT_BUSY,
+  23 BUILD_FAILED, 24 FLASH_FAILED, 25 NOT_CONNECTED, 26 DECLINED (no `--yes`
+  and no terminal), 27 NO_ESP_IDF, 28 BACKUP_FAILED.
+- Point the board at the server with `scripts/provision-board.sh` (board on
+  USB): it creates the device key and sends it to the board without printing
+  it. Don't run `server/gadget_server.py --new-key` yourself: it prints the key.
 
 ## Rules
 

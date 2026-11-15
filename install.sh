@@ -96,7 +96,9 @@ else
 fi
 
 step=2; log start "Hermes Agent (the brain, speech-to-text and text-to-speech)"
-if command -v hermes >/dev/null 2>&1; then log ok "$(hermes --version 2>&1 | head -1)"
+if command -v hermes >/dev/null 2>&1 && hermes --version >/dev/null 2>&1; then log ok "$(hermes --version 2>&1 | head -1)"
+elif command -v hermes >/dev/null 2>&1; then
+    fail 13 "HERMES_FAILED: hermes is installed but broken ($(hermes --version 2>&1 | head -1)); try: hermes pm repair"
 else
     if confirm "Install Hermes Agent from $HERMES_INSTALL_URL?"; then
         if [ $DRY = 1 ]; then log dry "curl -fsSL $HERMES_INSTALL_URL | bash"
@@ -108,6 +110,14 @@ else
     fi
 fi
 
+if [ $DRY = 1 ] || command -v hermes >/dev/null 2>&1; then
+    log info "Registering Timmy's brain skills with Hermes (skills.external_dirs)"
+    if [ $DRY = 1 ]; then log dry "scripts/hermes-skill-dirs.py $ROOT/server/hermes-skills $TIMMY_HOME/hermes-skills"
+    else python3 "$ROOT/scripts/hermes-skill-dirs.py" "$ROOT/server/hermes-skills" "$TIMMY_HOME/hermes-skills" | sed 's/^/    /' \
+        || log skip "Hermes has no config yet; run: hermes setup, then ./install.sh again"
+    fi
+fi
+
 step=3; log start "Personal data folder: $TIMMY_HOME"
 if [ -d "$TIMMY_HOME" ]; then
     log ok "exists; left untouched"
@@ -115,7 +125,7 @@ else
     run mkdir -p "$TIMMY_HOME" || fail 14 "TIMMY_HOME_FAILED: can't create $TIMMY_HOME"
     run cp -R "$ROOT/templates/timmy-home/." "$TIMMY_HOME/" || fail 14 "TIMMY_HOME_FAILED: can't copy templates"
     run cp "$ROOT/.env.example" "$TIMMY_HOME/.env"
-    run mkdir -p "$TIMMY_HOME/keys" "$TIMMY_HOME/briefings" "$TIMMY_HOME/topics" "$TIMMY_HOME/addons" "$TIMMY_HOME/skill-state"
+    run mkdir -p "$TIMMY_HOME/keys" "$TIMMY_HOME/briefings" "$TIMMY_HOME/alerts" "$TIMMY_HOME/topics" "$TIMMY_HOME/addons" "$TIMMY_HOME/skill-state" "$TIMMY_HOME/hermes-skills"
     run chmod 700 "$TIMMY_HOME" "$TIMMY_HOME/keys"
     run chmod 600 "$TIMMY_HOME/.env"
     log ok "created from templates (keys/ and .env are private: mode 700/600)"

@@ -61,7 +61,10 @@ Flashing doesn't erase NVS, so Wi-Fi and the server settings survive.
 
 1. **Wi-Fi**: on the board's screen, open Settings > Wi-Fi and pick your network
    (2.4 GHz). The board keeps the networks it has joined.
-2. **Server and key**: make a device key on the Mac that runs Timmy,
+2. **Server and key**: with the board on USB, run `scripts/provision-board.sh`
+   on the Mac that runs Timmy. It makes a device key and sends the server
+   address and key to the board (the key is never shown). Or by hand: make a
+   device key,
 
        python3 server/gadget_server.py --new-key timmy-desk
 

@@ -270,8 +270,10 @@
 
 <div id="bubbles" aria-live="polite"></div>
 <div id="alertspanel" role="dialog" aria-label="Briefings">
-  <div class="vp-head"><b>Briefings</b><span class="vp-x" title="Close" role="button" aria-label="Close">×</span></div>
-  <div class="ap-sec">Recent briefings</div><div id="ap-items"></div>
+  <div class="vp-head"><b>Alerts &amp; briefings</b><span class="vp-x" title="Close" role="button" aria-label="Close">×</span></div>
+  <div class="ap-sec" id="ap-watches-h" hidden>Watches</div><div id="ap-watches"></div>
+  <div class="ap-sec">Alerts &amp; briefings</div><div id="ap-items"></div>
+  <div class="ap-sec" id="ap-listings-h" hidden>Listings</div><div id="ap-listings"></div>
 </div>
 <div id="voicepanel" role="dialog" aria-label="Voice and avatar">
   <div class="vp-head"><b>Voice &amp; avatar</b><span class="vp-x" title="Close" role="button" aria-label="Close">×</span></div>
@@ -294,7 +296,7 @@
 <form id="ask" autocomplete="off">
   <button type="button" id="menubtn" aria-label="Menu" aria-expanded="false">☰<span id="menubadge"></span></button>
   <div id="menu" role="menu">
-    <button type="button" id="alertsbtn" class="hf" role="menuitem">Briefings<span id="alertsbadge"></span></button>
+    <button type="button" id="alertsbtn" class="hf" role="menuitem">Alerts<span id="alertsbadge"></span></button>
     <button type="button" id="voicebtn" class="hf" role="menuitem">Voice &amp; speed</button>
     <button type="button" id="hf" class="hf" role="menuitem">Hands-free “Hey Timmy”</button>
     <button type="button" id="facebtn" class="hf" role="menuitem">Avatar</button>
@@ -870,10 +872,18 @@ async function loadAlerts() {
 }
 function renderAlerts() {
   const seen = apSeen();
+  // Watches and listings come from add-ons (server/addons.py); hidden when there are none.
+  document.getElementById("ap-watches-h").hidden = !ALERTS.watches.length;
+  document.getElementById("ap-watches").innerHTML = ALERTS.watches.map(w =>
+    `<div class="ap-w"><span><b>${esc(w.name)}</b><br><small>last check ${when(w.last_run)} · next ${when(w.next_run)}</small></span>` +
+    `<span class="res ${w.last_result === "New find" ? "new" : ""}">${esc(w.last_result)}</span></div>`).join("");
   document.getElementById("ap-items").innerHTML = ALERTS.items.length ? ALERTS.items.map(i =>
     `<div class="ap-i ${i.kind} ${i.time > seen ? "unread" : ""}"><div class="t"><span>${esc(i.source)}</span><span>${esc(i.time)}</span></div>` +
     `<div class="h">${esc(i.title)}</div><div class="b">${linkify(i.text)}</div></div>`).join("")
-    : `<div class="ap-empty">No briefings yet. Say “brief me”.</div>`;
+    : `<div class="ap-empty">Nothing yet. Say “brief me” for a briefing.</div>`;
+  document.getElementById("ap-listings-h").hidden = !ALERTS.listings.length;
+  document.getElementById("ap-listings").innerHTML = ALERTS.listings.map(l =>
+    `<div class="ap-l"><a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.title)}</a><span>${esc(l.price)}</span></div>`).join("");
 }
 async function openAlerts() {
   vp.classList.remove("open");
@@ -1269,7 +1279,7 @@ async function voiceSkill(t) {
   if (/\b(show|open|see|check)\b.*\b(briefings?|alerts?)\b/i.test(t) || /^\s*(my )?(briefings|alerts)\s*[.!?]*$/i.test(t)) {
     await openAlerts();
     const n = ALERTS ? ALERTS.items.length : 0;
-    return n ? `Here are your briefings. ${n} so far.` : `No briefings yet. Say brief me.`;
+    return n ? `Here are your alerts and briefings. ${n} item${n > 1 ? "s" : ""} so far.` : `Nothing there yet. Say brief me for a briefing.`;
   }
   if (!hermesVoice) return null;
   const s = t.toLowerCase().replace(/[.!?]+$/, "");
@@ -1332,7 +1342,7 @@ navigator.getBattery?.().then(b => {
 let userActed = false;
 addEventListener("pointerdown", () => userActed = true, { once: true });
 addEventListener("keydown", () => userActed = true, { once: true });
-// Only today's briefing is shown; each one once per browser.
+// The same for new alerts. Only today's items are shown; each one once per browser.
 async function checkNews(kind) {
   try {
     const j = await (await fetch(`/${kind}/latest`)).json();
@@ -1343,7 +1353,7 @@ async function checkNews(kind) {
     if (userActed && state === "idle") say(j.text); else addMsg("kr", j.text);
   } catch { /* no endpoint (plain static server) */ }
 }
-const checkAll = () => { checkNews("briefing"); typeof loadAlerts === "function" && loadAlerts(); };
+const checkAll = () => { checkNews("briefing"); checkNews("alerts"); typeof loadAlerts === "function" && loadAlerts(); };
 setInterval(checkAll, 60000); setTimeout(checkAll, 1500);
 
 document.getElementById("brain").textContent = BRAIN_URL ? "LINKING" : "OFFLINE";

@@ -32,7 +32,7 @@ your Claude API key (or pick a local model) and a voice. Re-running it is safe.
     ./install.sh doctor        # what's working, what isn't and how to fix it (--json for tools)
     ./install.sh flash         # guided firmware flash for the desk gadget
 
-Options: `--yes` (no questions), `--dry-run`, `--json`, `--no-services`,
+Options: `--yes` (no questions), `--dry-run`, `--json`, `--no-services`, `--no-open`,
 `--with-firmware-tools` (ESP-IDF, only to build firmware). New Mac with an
 existing backup of your `~/.timmy`? See [docs/RESTORE.md](docs/RESTORE.md).
 

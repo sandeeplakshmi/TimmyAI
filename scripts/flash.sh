@@ -139,7 +139,7 @@ if [ $FLASH = 1 ]; then
 
     # 2. The image: prebuilt, or build it.
     if [ -z "$IMAGE" ]; then
-        export_idf || die 27 "NO_ESP_IDF: ESP-IDF v6.0.3 not found. Install it (docs: firmware/README.md) or pass --image with a prebuilt image."
+        export_idf || die 27 "NO_ESP_IDF: ESP-IDF v6.0.3 not found. Install it with ./install.sh --with-firmware-tools (ask the human first), or pass --image with a prebuilt image."
         B=build
         if [ $PUBLIC = 1 ]; then export TIMMY_EXTRA_COMPONENTS=""; B=build
         elif [ -z "${TIMMY_EXTRA_COMPONENTS+x}" ] && [ -d "$TIMMY_HOME/firmware-extras" ]; then B=build-extras; fi
