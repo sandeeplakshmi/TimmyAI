@@ -26,6 +26,8 @@ def _run():
     try:
         spec = importlib.util.spec_from_file_location("timmy_server", SERVER)
         mod = importlib.util.module_from_spec(spec)
+        import sys
+        sys.modules["timmy_server"] = mod
         spec.loader.exec_module(mod)
         mod.serve()
     except Exception as exc:  # never take the gateway down

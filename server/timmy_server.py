@@ -47,6 +47,7 @@ import sys
 import tempfile
 import threading
 import time
+import types
 import urllib.error
 import urllib.request
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -755,7 +756,7 @@ def serve():
     skillkit.ensure_loaded()   # skills and their schedule run whether or not a board is connected
     gadget = start_gadget()
     import addons
-    addons.load(sys.modules[__name__], gadget)   # private add-ons in $TIMMY_HOME/addons, if any
+    addons.load(sys.modules.get(__name__) or types.SimpleNamespace(**globals()), gadget)   # private add-ons in $TIMMY_HOME/addons, if any
     ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
 
 
