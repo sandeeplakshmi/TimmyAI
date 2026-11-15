@@ -1,4 +1,4 @@
-# Timmy
+# Timmy (TimmyAI)
 
 A personal voice assistant that runs on your own Mac, with a little round desk
 gadget to talk to it. Hold the button, ask, and Timmy answers out loud with
@@ -41,7 +41,7 @@ existing backup of your `~/.timmy`? See [docs/RESTORE.md](docs/RESTORE.md).
 Paste this into Claude Code, Codex, Cursor, Copilot or Gemini CLI, in an empty
 folder:
 
-> Install Timmy from &lt;repo URL&gt; on this Mac. Follow AGENTS.md, run
+> Install Timmy from <repo URL> on this Mac. Follow AGENTS.md, run
 > ./install.sh --yes, then ./install.sh doctor, fix anything it reports, and
 > stop to ask me before flashing the board.
 
