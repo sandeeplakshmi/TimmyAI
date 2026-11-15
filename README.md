@@ -21,7 +21,7 @@ Your personal data never lives in this repository: it is in `~/.timmy`
 
 ## Screenshots
 
-The web page (made-up demo data):
+The web page :
 
 <p align="center"><img src="docs/media/web-chat.png" width="820" alt="Timmy's web page: a short conversation next to the animated eyes"></p>
 
@@ -42,7 +42,6 @@ The web page (made-up demo data):
 
 ### Moods
 
-Rendered from the firmware's own drawing code, so this is exactly what the round AMOLED shows.
 
 | Idle | Listening | Thinking | Speaking |
 |------|-----------|----------|----------|
