@@ -104,6 +104,7 @@ static bool s_cpu_pd;       /* timmy_input_power_init() holds the CPU's retentio
 static esp_pm_lock_handle_t s_awake;   /* with s_cpu_pd: held whenever !s_cpu_low */
 static bool s_awake_held;
 #endif
+static volatile bool s_rest_now;  /* ">rest": asleep, as if on battery, Wi-Fi resting */
 static volatile bool s_nap_now;   /* ">nap": asleep, as if on battery, nap without waiting WIFI_NAP_MS */
 
 static void post(timmy_ptt_t type, bool wake)
@@ -497,8 +498,9 @@ static bool update_wifi_nap(TickType_t now, bool paused)
     if (!s_cpu_low) {
         low_since = now;
     }
-    if (!timmy_state_asleep() && s_nap_now) {
+    if (!timmy_state_asleep() && (s_nap_now || s_rest_now)) {
         s_nap_now = false;
+        s_rest_now = false;
         timmy_state_set_as_if_battery(false);
     }
     /* Timmy keeps its socket open while it rests: with Wi-Fi off it drops
@@ -776,6 +778,12 @@ static bool console_command(char *line, bool whole)
         fflush(stdout);
         return true;
     }
+    if (!strcmp(line, "rest")) {   /* sleep as on battery, Wi-Fi resting (bench: wake-up timing) */
+        timmy_state_set_as_if_battery(true);
+        set_asleep(true, "serial");
+        s_rest_now = true;
+        return true;
+    }
     if (!strcmp(line, "nap")) {
         timmy_state_set_as_if_battery(true);
         set_asleep(true, "serial");
@@ -828,7 +836,7 @@ static bool console_command(char *line, bool whole)
  * A line starting with '>' is a setup command, the same "key=value" text as
  * the BLE CMD characteristic, or one of the console's own: "status" prints
  * the device's state, "power" the battery meter (timmy_battery.h) and
- * "power.reset" starts it over, "nap" sleeps and leaves Wi-Fi at once (as
+ * "power.reset" starts it over, "rest" sleeps as if on battery (Wi-Fi resting, for wake-up timing), "nap" sleeps and leaves Wi-Fi at once (as
  * two minutes asleep on battery would; 'w' rejoins), "face=" shows a face
  * (see set_face), and "chat=" sends a typed message to Hatch (see chat_line
  * and tools/timmy/chat.py).

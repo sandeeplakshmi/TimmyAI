@@ -67,6 +67,17 @@ menu "Timmy"
 
     endchoice
 
+    config TIMMY_WIFI_REST_DEEP
+        bool "Deeper Wi-Fi sleep while resting on battery"
+        depends on TIMMY_ENABLED
+        default n
+        help
+            Resting on battery (screen off), Wi-Fi wakes only for every tenth
+            beacon (max modem sleep) instead of every beacon. That saves some
+            battery, but many routers drop frames buffered that long, so the
+            link to the server stalls and the board has to reconnect when it
+            wakes, delaying the first answer.
+
     config TIMMY_STATIC_BUFFERS_IN_PSRAM
         bool "Keep the avatar's and audio's static buffers in PSRAM"
         depends on TIMMY_ENABLED && SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY

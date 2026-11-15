@@ -560,7 +560,7 @@ def serve():
     waited = False
     while True:   # the port may still be held by a hand-started copy: take over when it goes
         try:
-            server = ws_serve(handler, "0.0.0.0", PORT, max_size=1 << 20, ping_interval=20, ping_timeout=20)
+            server = ws_serve(handler, "0.0.0.0", PORT, max_size=1 << 20, ping_interval=20, ping_timeout=45)
             break
         except OSError as exc:
             if not waited:

@@ -202,11 +202,17 @@ static wifi_ps_type_t power_ps(void)
     timmy_wifi_power_t level = s_power_level;
     bool held = s_awake_holds > 0;
     portEXIT_CRITICAL(&s_power_lock);
-    /* Resting, the radio wakes for every tenth beacon (the listen interval
-     * wifi_mgr joins with, about 1 s), not every DTIM; replies can wait that
-     * long. */
+    /* Resting, the radio still wakes for every DTIM beacon (min modem sleep)
+     * rather than every tenth (max modem sleep): many routers drop frames
+     * they buffer that long, which stalls the server link and makes the
+     * board reconnect after waking. CONFIG_TIMMY_WIFI_REST_DEEP restores the
+     * deeper sleep for longer battery life. */
     return held                      ? WIFI_PS_NONE
+#if CONFIG_TIMMY_WIFI_REST_DEEP
            : level == TIMMY_WIFI_REST ? WIFI_PS_MAX_MODEM
+#else
+           : level == TIMMY_WIFI_REST ? WIFI_PS_MIN_MODEM
+#endif
            : level == TIMMY_WIFI_DOZE ? WIFI_PS_MIN_MODEM
                                      : s_power_before;
 }

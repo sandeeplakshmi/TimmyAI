@@ -92,6 +92,7 @@ static char s_fallback[URL_MAX + 1];
 static volatile bool s_away;            /* this connection uses the fallback URL */
 static int64_t s_unready_since;         /* trying to connect since (0: connected or idle) */
 #define SWITCH_AFTER_US (12LL * 1000000)
+#define ALIVE_US (1500LL * 1000)    /* a ping after waking must come back this fast */
 static char s_dev[DEV_MAX + 1] = "timmy-desk";
 static uint8_t s_key[KEY_BYTES];
 static bool s_have_key;
@@ -275,7 +276,15 @@ void timmy_hatch_status(timmy_hatch_status_t *out)
 
 void timmy_hatch_test(void) { s_restart = true; }
 void timmy_hatch_config_changed(void) { s_restart = true; }
-void timmy_hatch_set_resting(bool resting) { (void)resting; }
+/* Waking from a battery rest: the socket may have died while the radio slept
+ * (routers drop frames buffered for long-sleeping clients). Check it at once
+ * with a ping instead of finding out on the next press. */
+static volatile bool s_check_alive;
+static volatile int64_t s_pong_at;
+void timmy_hatch_set_resting(bool resting)
+{
+    if (!resting) s_check_alive = true;
+}
 
 const char *timmy_hatch_state_name(timmy_hatch_state_t state)
 {
@@ -503,6 +512,8 @@ static void on_text(const char *data, size_t len)
     } else if (!strcmp(type, "hello")) {
         const char *nonce = cJSON_GetStringValue(cJSON_GetObjectItem(j, "nonce"));
         if (nonce) on_hello(nonce);
+    } else if (!strcmp(type, "pong")) {
+        s_pong_at = esp_timer_get_time();
     } else if (!strcmp(type, "ready")) {
         s_ready = true;
         s_unready_since = 0;
@@ -724,6 +735,29 @@ static void timmy_task(void *arg)
             }
         }
         static int64_t next_try;
+        /* Just woke: a socket that doesn't answer a ping within ALIVE_US is
+         * dead; reconnect right away (home first) instead of on the next press. */
+        static int64_t alive_sent;
+        if (s_check_alive) {
+            s_check_alive = false;
+            if (s_ws && s_ready && send_json("{\"type\":\"ping\"}")) {
+                alive_sent = esp_timer_get_time();
+            } else if (want && !s_ready) {
+                if (s_ws) ws_stop();
+                s_away = false;
+                next_try = 0;
+            }
+        }
+        if (alive_sent && s_pong_at >= alive_sent) {
+            ESP_LOGI(TAG, "awake: link alive (%lld ms)", (long long)((s_pong_at - alive_sent) / 1000));
+            alive_sent = 0;
+        } else if (alive_sent && esp_timer_get_time() - alive_sent > ALIVE_US) {
+            ESP_LOGW(TAG, "awake: link didn't answer; reconnecting");
+            alive_sent = 0;
+            ws_stop();
+            s_away = false;
+            next_try = 0;
+        }
         if (want && !s_ws && esp_timer_get_time() >= next_try) {
             ws_start();
             if (!s_ws) next_try = esp_timer_get_time() + 5000000;   /* no memory or task: back off */
