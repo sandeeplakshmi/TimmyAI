@@ -21,7 +21,7 @@ Your personal data never lives in this repository: it is in `~/.timmy`
 
 On macOS:
 
-    git clone <repo URL> Timmy && cd Timmy
+    git clone https://github.com/sandeeplakshmi/TimmyAI.git Timmy && cd Timmy
     ./install.sh
 
 It checks and installs what's missing (Homebrew, Python, Hermes Agent, a
@@ -41,7 +41,7 @@ existing backup of your `~/.timmy`? See [docs/RESTORE.md](docs/RESTORE.md).
 Paste this into Claude Code, Codex, Cursor, Copilot or Gemini CLI, in an empty
 folder:
 
-> Install Timmy from <repo URL> on this Mac. Follow AGENTS.md, run
+> Install Timmy from https://github.com/sandeeplakshmi/TimmyAI on this Mac. Follow AGENTS.md, run
 > ./install.sh --yes, then ./install.sh doctor, fix anything it reports, and
 > stop to ask me before flashing the board.
 

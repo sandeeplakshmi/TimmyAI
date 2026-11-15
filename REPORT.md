@@ -317,10 +317,10 @@ a file with "muse" in its path were blocked the same way.
 - **The fresh macOS user account test** wasn't done (it needs an admin GUI
   step). The temp-HOME tests stand in for it, and they can't exercise the
   per-user launch agents.
-- The GitHub repo URL is set as `origin` but kept out of the repo files: it
-  contains the owner's login, which is on the private denylist. Put it into
-  README.md/AGENTS.md (replacing `<repo URL>`) once that denylist entry is
-  narrowed. Nothing has been pushed.
+- `origin` is https://github.com/sandeeplakshmi/TimmyAI (private). At the owner's request the first name and
+  GitHub login were removed from the private denylist so the repo URL can
+  appear in README.md and AGENTS.md; the e-mail address and every other entry
+  stay.
 
 ## Not done yet (next session)
 

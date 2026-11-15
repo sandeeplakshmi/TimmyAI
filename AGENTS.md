@@ -7,7 +7,7 @@ Personal data lives outside the repo in `~/.timmy` (`TIMMY_HOME`).
 
 ## Install (macOS)
 
-Repository: <repo URL> (the app is called Timmy; the repository is TimmyAI).
+Repository: https://github.com/sandeeplakshmi/TimmyAI (the app is called Timmy; the repository is TimmyAI).
 
 1. `./install.sh --yes` installs prerequisites, creates `~/.timmy` from
    `templates/timmy-home` if missing (never touches an existing one), sets up
