@@ -14,6 +14,17 @@ code reads from there; nothing in it is ever committed.
 - `~/.timmy/allowed-hosts.txt`: extra host names the web page answers to.
 - The Claude API key lives in Hermes' own env file; enter it on the setup page.
 
+## Calendar
+
+Timmy reads Apple Calendar through EventKit in one query
+(`server/hermes-skills/daily-briefing/scripts/calendar_events.py`), for any day
+or range: "any events tomorrow?", "what's on this week?", "am I free Friday?".
+It is read-only and skips holiday, birthday and other subscribed calendars
+unless you ask about them. It needs **Calendars** access (System Settings >
+Privacy & Security > Calendars) for the app running Hermes; the gateway runs
+under `osascript`. The script never pops up the macOS prompt on its own:
+`calendar_events.py --request-access` asks once, when you choose to run it.
+
 ## Server add-ons
 
 Put a folder in `~/.timmy/addons/<name>/` with an `addon.py` that defines

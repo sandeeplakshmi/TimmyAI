@@ -31,6 +31,9 @@ Repository: https://github.com/sandeeplakshmi/TimmyAI (the app is called Timmy; 
 - `./install.sh doctor` passes its required checks.
 - `scripts/check-licenses.sh` and `scripts/check-private.sh` print "clean".
 - Server syntax: `python3 -m py_compile server/*.py`.
+- Tests: `python3 -m unittest discover tests`.
+- Calendar (needs Calendars access for the app running Hermes; never prompts on its own):
+  `server/hermes-skills/daily-briefing/scripts/calendar_events.py tomorrow` prints JSON in well under a second.
 - Firmware: `cd firmware && idf.py build` (ESP-IDF v6.0.3; `./install.sh --with-firmware-tools` installs it).
 
 ## Firmware and the board

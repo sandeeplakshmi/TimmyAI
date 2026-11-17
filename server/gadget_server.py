@@ -71,7 +71,8 @@ AUTH_FAIL_MAX, AUTH_FAIL_WINDOW, AUTH_LOCKOUT = 5, 600, 120   # per client: 5 ba
 
 SYSTEM_PROMPT = ("You are Timmy, a personal assistant, talking by voice through a small round "
                  "desk gadget (a push-to-talk speaker with a little screen). Replies are spoken aloud: keep them "
-                 "to one to three short sentences, no markdown, no lists, unless the user asks for detail. Be friendly.")
+                 "to one to three short sentences, no markdown, no lists, unless the user asks for detail. Be friendly. "
+                 "For calendar questions use the daily-briefing skill's calendar_events.py; never script Calendar.")
 
 MOODS = ("happy", "excited", "curious", "sad", "love", "laughing", "surprised", "neutral")
 MOOD_TAG = re.compile(r"\[\s*(" + "|".join(MOODS) + r")\s*\]\s*", re.I)

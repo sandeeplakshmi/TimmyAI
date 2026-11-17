@@ -1114,7 +1114,8 @@ async function say(text) {
 
 // ---- Chat ----
 const chatHistory = [{ role: "system", content: "You are Timmy, a personal assistant, talking by voice on the user's HUD page. " +
-  "Replies are spoken aloud: keep them to one to three short sentences, no markdown, no lists, unless the user asks for detail. Be friendly." }];
+  "Replies are spoken aloud: keep them to one to three short sentences, no markdown, no lists, unless the user asks for detail. Be friendly. " +
+  "For calendar questions use the daily-briefing skill's calendar_events.py; never script Calendar." }];
 function addMsg(who, text) {
   const d = document.createElement("div");
   d.className = "msg " + who;

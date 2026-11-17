@@ -24,6 +24,8 @@ Control the Mac with `open`, `osascript` and `shortcuts`, using the terminal too
 - "Turn on Do Not Disturb" / "focus mode on/off"
 - "Run my <name> shortcut" / "what shortcuts do I have?"
 
+Not for the calendar: events for any day or range come from the daily-briefing skill's `calendar_events.py`. Never script Calendar with `osascript`.
+
 ## Procedure
 
 ### Apps
